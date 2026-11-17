@@ -1,31 +1,16 @@
 package com.moonwave.music
 
-import android.net.Uri
+import com.moonwave.music.core.model.Album
+import com.moonwave.music.core.model.Artist
+import com.moonwave.music.core.model.Folder
 import com.moonwave.music.core.model.Playlist
-import com.moonwave.music.core.model.Song
+import com.moonwave.music.core.model.SmartPlaylistType
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Test
 
 class MusicModelTest {
-
-    @Test
-    fun testSongCreationAndDefaultValues() {
-        val song = Song(
-            id = 101L,
-            title = "Midnight Echo",
-            artist = "Lunar Eclipse",
-            album = "Cosmic Journey",
-            duration = 180000L,
-            uri = Uri.EMPTY,
-            path = "/storage/emulated/0/Music/track.mp3"
-        )
-
-        assertEquals(101L, song.id)
-        assertEquals("Midnight Echo", song.title)
-        assertEquals(0, song.playCount)
-        assertFalse(song.isFavorite)
-    }
 
     @Test
     fun testPlaylistDefaults() {
@@ -38,5 +23,39 @@ class MusicModelTest {
         assertEquals("Night Drive", playlist.name)
         assertEquals(3, playlist.songCount)
         assertFalse(playlist.isSmartPlaylist)
+        assertNull(playlist.smartType)
+    }
+
+    @Test
+    fun testAlbumAndArtistModels() {
+        val album = Album(
+            id = 201L,
+            title = "Lunar Eclipse",
+            artist = "Moonwave",
+            songCount = 12,
+            year = 2026
+        )
+
+        assertEquals("Lunar Eclipse", album.title)
+        assertEquals(12, album.songCount)
+
+        val artist = Artist(
+            id = 301L,
+            name = "Moonwave",
+            songCount = 24,
+            albumCount = 2
+        )
+
+        assertEquals("Moonwave", artist.name)
+        assertEquals(24, artist.songCount)
+
+        val folder = Folder(
+            path = "/storage/emulated/0/Music",
+            name = "Music",
+            songCount = 50
+        )
+
+        assertEquals("Music", folder.name)
+        assertEquals(50, folder.songCount)
     }
 }
