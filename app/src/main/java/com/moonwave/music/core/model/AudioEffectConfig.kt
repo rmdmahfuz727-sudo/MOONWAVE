@@ -3,8 +3,8 @@ package com.moonwave.music.core.model
 data class EqualizerBand(
     val index: Int,
     val centerFreqHz: Int,
-    val minLevelMilliBels: Short,
-    val maxLevelMilliBels: Short,
+    val minBandLevel: Short,
+    val maxBandLevel: Short,
     val currentLevelMilliBels: Short
 )
 
