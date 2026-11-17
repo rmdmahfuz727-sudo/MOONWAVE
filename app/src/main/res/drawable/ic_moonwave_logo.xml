@@ -1,0 +1,81 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="256dp"
+    android:height="256dp"
+    android:viewportWidth="256"
+    android:viewportHeight="256">
+
+    <!-- Deep Outer Cosmic Glow -->
+    <path
+        android:pathData="M128,128m-116,0a116,116 0,1 1,232 0a116,116 0,1 1,-232 0">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:centerX="128"
+                android:centerY="128"
+                android:gradientRadius="116"
+                android:type="radial">
+                <item android:color="#1A38BDF8" android:offset="0.0" />
+                <item android:color="#0A6366F1" android:offset="0.7" />
+                <item android:color="#00000000" android:offset="1.0" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Crescent Moon Silhouette -->
+    <path
+        android:pathData="M178,54 C132,48 88,78 78,124 C68,170 96,212 142,218 C116,210 94,188 94,152 C94,104 136,68 178,54 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="70"
+                android:startY="50"
+                android:endX="180"
+                android:endY="220"
+                android:type="linear">
+                <item android:color="#E2E8F0" android:offset="0.0" />
+                <item android:color="#38BDF8" android:offset="0.5" />
+                <item android:color="#6366F1" android:offset="1.0" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Stylized Sound Wave Bars radiating inside the moon curve forming an 'M' -->
+    <!-- Bar 1 -->
+    <path
+        android:pathData="M116,112 L116,170"
+        android:strokeWidth="6"
+        android:strokeColor="#38BDF8"
+        android:strokeLineCap="round" />
+
+    <!-- Bar 2 (Peak) -->
+    <path
+        android:pathData="M132,88 L132,188"
+        android:strokeWidth="6"
+        android:strokeColor="#06B6D4"
+        android:strokeLineCap="round" />
+
+    <!-- Bar 3 (Center dip of 'M') -->
+    <path
+        android:pathData="M148,118 L148,162"
+        android:strokeWidth="6"
+        android:strokeColor="#818CF8"
+        android:strokeLineCap="round" />
+
+    <!-- Bar 4 (Secondary Peak) -->
+    <path
+        android:pathData="M164,96 L164,182"
+        android:strokeWidth="6"
+        android:strokeColor="#A855F7"
+        android:strokeLineCap="round" />
+
+    <!-- Bar 5 -->
+    <path
+        android:pathData="M180,120 L180,158"
+        android:strokeWidth="6"
+        android:strokeColor="#EC4899"
+        android:strokeLineCap="round" />
+
+    <!-- Starlight Accent Dot -->
+    <path
+        android:pathData="M192,72m-4,0a4,4 0,1 1,8 0a4,4 0,1 1,-8 0"
+        android:fillColor="#F8FAFC" />
+</vector>

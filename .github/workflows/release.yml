@@ -1,0 +1,140 @@
+name: MOONWAVE Release Build & Publish
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      release_version:
+        description: 'Release Version (e.g. 1.0.0)'
+        required: true
+        default: '1.0.0'
+      release_notes:
+        description: 'Release Notes summary'
+        required: false
+        default: 'Production release of MOONWAVE Premium Android Music Player by Mahfuz Rahman.'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build Release APK & AAB
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: gradle
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Setup Keystore for Signing
+        run: |
+          mkdir -p ~/.android
+          if [ -n "${{ secrets.KEYSTORE_BASE64 }}" ]; then
+            echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > ~/.android/release.keystore
+            echo "KEYSTORE_PATH=$HOME/.android/release.keystore" >> $GITHUB_ENV
+            echo "KEY_ALIAS=${{ secrets.KEY_ALIAS }}" >> $GITHUB_ENV
+            echo "KEY_PASSWORD=${{ secrets.KEY_PASSWORD }}" >> $GITHUB_ENV
+            echo "STORE_PASSWORD=${{ secrets.STORE_PASSWORD }}" >> $GITHUB_ENV
+          else
+            echo "Generating release signing key..."
+            keytool -genkey -v \
+              -keystore ~/.android/release.keystore \
+              -storepass moonwavepass \
+              -alias moonwavekey \
+              -keypass moonwavepass \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000 \
+              -dname "CN=MOONWAVE, OU=Engineering, O=Mahfuz Rahman, C=US"
+            echo "KEYSTORE_PATH=$HOME/.android/release.keystore" >> $GITHUB_ENV
+            echo "KEY_ALIAS=moonwavekey" >> $GITHUB_ENV
+            echo "KEY_PASSWORD=moonwavepass" >> $GITHUB_ENV
+            echo "STORE_PASSWORD=moonwavepass" >> $GITHUB_ENV
+          fi
+
+      - name: Build Debug & Release Artifacts
+        run: |
+          ./gradlew assembleDebug assembleRelease bundleRelease --no-daemon --stacktrace
+
+      - name: Sign Release APK
+        run: |
+          mkdir -p release-artifacts
+          UNSIGNED_APK=$(find app/build/outputs/apk/release -name "*.apk" | head -n 1)
+          
+          if [ -f "$UNSIGNED_APK" ]; then
+            jarsigner -verbose \
+              -sigalg SHA256withRSA \
+              -digestalg SHA-256 \
+              -keystore "$KEYSTORE_PATH" \
+              -storepass "$STORE_PASSWORD" \
+              -keypass "$KEY_PASSWORD" \
+              "$UNSIGNED_APK" "$KEY_ALIAS"
+            
+            cp "$UNSIGNED_APK" release-artifacts/MOONWAVE-release.apk
+          fi
+
+          # Copy Debug APK
+          if [ -f "app/build/outputs/apk/debug/app-debug.apk" ]; then
+            cp app/build/outputs/apk/debug/app-debug.apk release-artifacts/MOONWAVE-debug.apk
+          fi
+
+          # Copy Release AAB
+          AAB_FILE=$(find app/build/outputs/bundle/release -name "*.aab" | head -n 1)
+          if [ -f "$AAB_FILE" ]; then
+            cp "$AAB_FILE" release-artifacts/MOONWAVE-release.aab
+          fi
+
+      - name: Upload Release Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: MOONWAVE-Production-Package
+          path: |
+            release-artifacts/MOONWAVE-release.apk
+            release-artifacts/MOONWAVE-release.aab
+            release-artifacts/MOONWAVE-debug.apk
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
+        with:
+          tag_name: ${{ github.ref_name || format('v{0}', github.event.inputs.release_version) }}
+          name: MOONWAVE v${{ github.event.inputs.release_version || '1.0.0' }} - Premium Android Music Player
+          body: |
+            # 🌙 MOONWAVE v${{ github.event.inputs.release_version || '1.0.0' }}
+            ### Premium Android Music Player
+
+            Lead Developer: **[Mahfuz Rahman](https://github.com/rmdmahfuz727-sudo)**  
+            GitHub: [@rmdmahfuz727-sudo](https://github.com/rmdmahfuz727-sudo)
+
+            ---
+
+            ### 🚀 What's New:
+            ${{ github.event.inputs.release_notes || 'Initial production release of MOONWAVE.' }}
+
+            - 🎵 **High-Fidelity Audio Engine**: AndroidX Media3 ExoPlayer with gapless playback and audio focus.
+            - 🎛️ **Hardware Audio Lab**: 5/10-Band Graphic Equalizer, Bass Boost, 3D Surround Virtualizer, and Reverb presets.
+            - 📜 **Synchronized Lyrics**: LRCLIB official API integration with karaoke real-time highlights and tap-to-seek.
+            - 🎨 **Customization Center**: 7 Player Layouts (Flagship, Vinyl Turntable, Full-screen Artwork, Minimal, Gradient, Lyrics-Focused, Compact), 4 Theme Modes, and 6 Accent Colors.
+            - 📂 **Local Music Library**: MediaStore indexer, Albums, Artists, Folders, Smart Playlists, and custom playlist editor.
+
+            ### 📦 Downloadable Assets:
+            - **`MOONWAVE-release.apk`**: Signed production APK ready to install.
+            - **`MOONWAVE-debug.apk`**: Debug build for developer testing.
+            - **`MOONWAVE-release.aab`**: Android App Bundle for Google Play distribution.
+          files: |
+            release-artifacts/MOONWAVE-release.apk
+            release-artifacts/MOONWAVE-release.aab
+            release-artifacts/MOONWAVE-debug.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
