@@ -148,9 +148,9 @@
         android:layout_alignParentStart="true"
         android:layout_marginTop="4dp"
         android:layout_marginStart="12dp"
-        android:src="@drawable/ic_launcher_foreground"
+        android:src="@drawable/ic_applogo"
         android:alpha="0.9"
-        android:contentDescription="SpatialFlow Logo" />
+        android:contentDescription="MOONWAVE Logo" />
 
     <!-- Lyrics Toggle Top Right - Moved to TOP Z-order to prevent clicks being intercepted -->
     <ImageButton
