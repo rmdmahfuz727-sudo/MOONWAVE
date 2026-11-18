@@ -36,6 +36,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -2904,7 +2905,62 @@ private fun CreditsCard(onOpenUrl: (String) -> Unit) {
         verticalArrangement = Arrangement.spacedBy(16.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
-        // Original Creator & Architect: Shubham Karande (SpatialFlow)
+        // Lead Creator: Mahfuz Rahman (MOONWAVE)
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(24.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+            )
+        ) {
+            Column(
+                modifier = Modifier
+                    .padding(24.dp)
+                    .fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                coil.compose.AsyncImage(
+                    model = "https://github.com/rmdmahfuz727-sudo.png",
+                    contentDescription = "Mahfuz Rahman",
+                    modifier = Modifier
+                        .size(72.dp)
+                        .clip(CircleShape),
+                    contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                )
+                
+                Text(
+                    text = "Mahfuz Rahman",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.padding(top = 12.dp)
+                )
+                Text(
+                    text = "Creator & Lead Developer of MOONWAVE",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.padding(top = 2.dp)
+                )
+                Text(
+                    text = "MOONWAVE branding, features, cloud CI/CD distribution & updates",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+                
+                Row(
+                    modifier = Modifier.padding(top = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    SocialIconButton(icon = R.drawable.ic_github, onClick = { onOpenUrl("https://github.com/rmdmahfuz727-sudo/MOONWAVE") })
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Open Source Attribution: Shubham Karande (SpatialFlow)
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(24.dp),
@@ -2942,7 +2998,7 @@ private fun CreditsCard(onOpenUrl: (String) -> Unit) {
                     modifier = Modifier.padding(top = 2.dp)
                 )
                 Text(
-                    text = "Source code, design system, audio architecture & assets",
+                    text = "Upstream open-source foundation, audio architecture & baseline design",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 4.dp)
@@ -2955,59 +3011,6 @@ private fun CreditsCard(onOpenUrl: (String) -> Unit) {
                     SocialIconButton(icon = R.drawable.ic_github, onClick = { onOpenUrl("https://github.com/MythicalSHUB/SpatialFlow") })
                     SocialIconButton(icon = R.drawable.ic_instagram, onClick = { onOpenUrl("https://instagram.com/mythicalshub") })
                     SocialIconButton(icon = R.drawable.ic_youtube, onClick = { onOpenUrl("https://youtube.com/@8dmusic_s") })
-                }
-            }
-        }
-
-        // Project Maintainer: Mahfuz Rahman (MOONWAVE)
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainerLow
-            )
-        ) {
-            Column(
-                modifier = Modifier
-                    .padding(24.dp)
-                    .fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                coil.compose.AsyncImage(
-                    model = "https://github.com/rmdmahfuz727-sudo.png",
-                    contentDescription = "Mahfuz Rahman",
-                    modifier = Modifier
-                        .size(72.dp)
-                        .clip(CircleShape),
-                    contentScale = androidx.compose.ui.layout.ContentScale.Crop
-                )
-                
-                Text(
-                    text = "Mahfuz Rahman",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.padding(top = 12.dp)
-                )
-                Text(
-                    text = "MOONWAVE Maintainer & Developer",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.padding(top = 2.dp)
-                )
-                Text(
-                    text = "Cloud compilation, distribution & ecosystem updates",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 4.dp)
-                )
-                
-                Row(
-                    modifier = Modifier.padding(top = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    SocialIconButton(icon = R.drawable.ic_github, onClick = { onOpenUrl("https://github.com/rmdmahfuz727-sudo/MOONWAVE") })
                 }
             }
         }
@@ -3057,11 +3060,12 @@ private fun AppLogoSection(isLandscape: Boolean) {
             .padding(top = if (isLandscape) 8.dp else 16.dp, bottom = 32.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Icon(
+        Image(
             painter = painterResource(R.drawable.ic_applogo),
             contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.size(iconSize)
+            modifier = Modifier
+                .size(iconSize)
+                .clip(RoundedCornerShape(22.dp))
         )
         Text(
             text = stringResource(R.string.app_name),
@@ -3071,7 +3075,7 @@ private fun AppLogoSection(isLandscape: Boolean) {
             letterSpacing = 0.sp
         )
         Text(
-            text = "© 2025 Shubham Karande",
+            text = "© 2026 Mahfuz Rahman. All Rights Reserved.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(top = 4.dp)

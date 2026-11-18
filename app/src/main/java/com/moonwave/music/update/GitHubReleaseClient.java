@@ -25,7 +25,7 @@ public class GitHubReleaseClient {
             URL url = new URL(apiUrl);
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
             connection.setRequestMethod("GET");
-            connection.setRequestProperty("User-Agent", "SpatialFlow-UpdateChecker");
+            connection.setRequestProperty("User-Agent", "MOONWAVE-UpdateChecker");
             connection.setConnectTimeout(10000);
             connection.setReadTimeout(10000);
 
@@ -79,7 +79,7 @@ public class GitHubReleaseClient {
             URL url = new URL(apiUrl);
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
             connection.setRequestMethod("GET");
-            connection.setRequestProperty("User-Agent", "SpatialFlow-UpdateChecker");
+            connection.setRequestProperty("User-Agent", "MOONWAVE-UpdateChecker");
             connection.setConnectTimeout(10000);
             connection.setReadTimeout(10000);
 

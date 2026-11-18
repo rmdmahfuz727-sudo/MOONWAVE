@@ -97,11 +97,11 @@ public class UpdateManager {
             Uri uri = Uri.parse(apkUrl);
             DownloadManager.Request request = new DownloadManager.Request(uri);
 
-            request.setTitle("SpatialFlow Update");
+            request.setTitle("MOONWAVE Update");
             request.setDescription("Downloading latest version...");
             request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
 
-            String filename = "SpatialFlow-update.apk";
+            String filename = "MOONWAVE-update.apk";
             request.setDestinationInExternalFilesDir(context, Environment.DIRECTORY_DOWNLOADS, filename);
 
             long downloadId = dm.enqueue(request);

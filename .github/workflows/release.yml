@@ -100,15 +100,15 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
         with:
-          tag_name: ${{ github.ref_name != 'main' && github.ref_name || 'v2.0.0' }}
-          name: MOONWAVE v2.0.0 - Premium Music Experience
+          tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'v2.0.1' }}
+          name: MOONWAVE ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'v2.0.1' }} - Premium Music Experience
           prerelease: false
           files: |
             dist/MOONWAVE-release.apk
             dist/MOONWAVE-debug.apk
             dist/checksums.txt
           body: |
-            # 🌙 MOONWAVE v2.0.0
+            # 🌙 MOONWAVE ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'v2.0.1' }}
             ### Official Original Flagship Release
 
             Lead Developer & Maintainer: **[Mahfuz Rahman](https://github.com/rmdmahfuz727-sudo)**  

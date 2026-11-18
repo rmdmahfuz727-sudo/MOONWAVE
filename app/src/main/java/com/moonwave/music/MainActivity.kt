@@ -553,7 +553,7 @@ class MainActivity : AppCompatActivity() {
 
         lifecycleScope.launch(Dispatchers.IO) {
             try {
-                val client = GitHubReleaseClient("MythicalSHUB", "SpatialFlow")
+                val client = GitHubReleaseClient("rmdmahfuz727-sudo", "MOONWAVE")
                 val release = client.latestRelease ?: return@launch
 
                 val currentVersion = BuildConfig.VERSION_NAME

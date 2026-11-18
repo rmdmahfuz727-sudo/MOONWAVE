@@ -83,8 +83,8 @@ MOONWAVE is built upon and incorporates code, design, and audio architecture fro
 
 Download the latest production APK from [Releases](https://github.com/rmdmahfuz727-sudo/MOONWAVE/releases):
 
-1. **`MOONWAVE-SpatialFlow-release.apk`**: Signed production APK ready to install on Android 7.0+ (API 25+).
-2. **`MOONWAVE-SpatialFlow-debug.apk`**: Debug build for developer testing and logging.
+1. **`MOONWAVE-release.apk`**: Signed production APK ready to install on Android 7.0+ (API 25+).
+2. **`MOONWAVE-debug.apk`**: Debug build for developer testing and logging.
 
 ---
 
