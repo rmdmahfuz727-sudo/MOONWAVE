@@ -284,105 +284,39 @@ fun LibraryScreen(
             Column(
                 modifier = Modifier.fillMaxSize()
             ) {
-                // Header Row (Hides in Device Files)
-                AnimatedVisibility(
-                    visible = activeTab != "Device Files",
-                    enter = expandVertically() + fadeIn(),
-                    exit = shrinkVertically() + fadeOut()
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "Library",
-                            style = MaterialTheme.typography.headlineMedium,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
+                val userProfile by accountViewModel?.userProfile?.collectAsStateWithLifecycle() ?: remember { mutableStateOf(null) }
+                var librarySearchQuery by remember { mutableStateOf("") }
 
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            IconButton(onClick = { showHistoryScreen = true }) {
-                                Icon(
-                                    painter = painterResource(id = R.drawable.ic_history),
-                                    contentDescription = "Listening History",
-                                    tint = MaterialTheme.colorScheme.onSurface,
-                                    modifier = Modifier.size(24.dp)
-                                )
-                            }
+                // Mochy Library Top Bar
+                com.moonwave.music.ui.component.MochyLibraryTopBar(
+                    avatarUrl = userProfile?.avatarUrl,
+                    onAvatarClick = { showAccountScreen = true },
+                    onHistoryClick = { showHistoryScreen = true }
+                )
 
-                            val userProfile by accountViewModel?.userProfile?.collectAsStateWithLifecycle() ?: remember { mutableStateOf(null) }
-                            if (userProfile?.avatarUrl != null) {
-                                AsyncImage(
-                                    model = ImageRequest.Builder(LocalContext.current)
-                                        .data(userProfile?.avatarUrl)
-                                        .crossfade(true)
-                                        .build(),
-                                    contentDescription = "Account Settings",
-                                    modifier = Modifier
-                                        .size(32.dp)
-                                        .clip(CircleShape)
-                                        .clickable { showAccountScreen = true },
-                                    contentScale = ContentScale.Crop
-                                )
-                            } else {
-                                IconButton(onClick = { showAccountScreen = true }) {
-                                    Icon(
-                                        imageVector = Icons.Default.AccountCircle,
-                                        contentDescription = "Account Settings",
-                                        tint = MaterialTheme.colorScheme.onSurface,
-                                        modifier = Modifier.size(28.dp)
-                                    )
-                                }
-                            }
+                // Mochy Library Search Bar
+                com.moonwave.music.ui.component.MochyLibrarySearchBar(
+                    query = librarySearchQuery,
+                    onQueryChange = { librarySearchQuery = it }
+                )
+
+                // Mochy Library Filter Chips
+                com.moonwave.music.ui.component.MochyLibraryFilterChips(
+                    selectedTab = when (activeTab) {
+                        "Device Files" -> "Local & downloaded"
+                        "Cached" -> "Cached"
+                        "Imported" -> "Imported"
+                        else -> "All"
+                    },
+                    onTabSelected = { selected ->
+                        activeTab = when (selected) {
+                            "Local & downloaded" -> "Device Files"
+                            "Cached" -> "Cached"
+                            "Imported" -> "Imported"
+                            else -> ""
                         }
                     }
-                }
-
-                // Horizontal scroll chips row
-            val tabs = listOf(
-                "Playlists",
-                "Recap",
-                "Podcasts",
-                "Songs",
-                "Albums",
-                "Artists",
-                "Device Files"
-            )
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState())
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                tabs.forEach { tabName ->
-                    val isSelected = activeTab == tabName
-                    FilterChip(
-                        selected = isSelected,
-                        onClick = {
-                            activeTab = if (isSelected) "" else tabName
-                        },
-                        label = { Text(tabName, fontWeight = FontWeight.SemiBold) },
-                        shape = RoundedCornerShape(8.dp),
-                        border = null,
-                        colors = FilterChipDefaults.filterChipColors(
-                            containerColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
-                            labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                            selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
-                    )
-                }
-            }
+                )
 
             Box(
                 modifier = Modifier
@@ -742,7 +676,9 @@ fun LibraryScreen(
                             }
                         }
                     }
-                    "" -> UnifiedLibraryContent(nestedScrollConnection)
+                    "Cached" -> SongsTabContent(nestedScrollConnection, viewModel)
+                    "Imported" -> PlaylistsTabContent(nestedScrollConnection, viewModel)
+                    else -> UnifiedLibraryContent(nestedScrollConnection, onCategoryClick = { activeTab = it })
                 }
             }
         }
@@ -962,7 +898,8 @@ fun SongListItem(
 
 @Composable
 private fun UnifiedLibraryContent(
-    nestedScrollConnection: androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+    nestedScrollConnection: androidx.compose.ui.input.nestedscroll.NestedScrollConnection,
+    onCategoryClick: (String) -> Unit = {}
 ) {
     val context = LocalContext.current
     val activity = remember { getActivityFromContext(context) as? androidx.fragment.app.FragmentActivity }
@@ -1060,20 +997,96 @@ private fun UnifiedLibraryContent(
         list
     }
 
-    if (unifiedItems.isEmpty()) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("No items found in your library", color = MaterialTheme.colorScheme.onSurfaceVariant)
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(2),
+        contentPadding = PaddingValues(start = 16.dp, top = 12.dp, end = 16.dp, bottom = 160.dp),
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .nestedScroll(nestedScrollConnection)
+    ) {
+        // Mochy Import banner
+        item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(2) }) {
+            com.moonwave.music.ui.component.MochyImportBanner(
+                onClick = { onCategoryClick("Imported") },
+                modifier = Modifier.padding(bottom = 4.dp)
+            )
         }
-    } else {
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(2),
-            contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 160.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-            modifier = Modifier
-                .fillMaxSize()
-                .nestedScroll(nestedScrollConnection)
-        ) {
+
+        // Mochy 2x2 Bento Category Cards
+        item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(2) }) {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    val songCovers = onlineSongs.take(2).map { it.thumbnailUrl }
+                    com.moonwave.music.ui.component.MochyLibraryCategoryCard(
+                        title = "Songs",
+                        count = onlineSongs.size,
+                        covers = songCovers,
+                        onClick = { onCategoryClick("Songs") },
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    val playlistCovers = onlinePlaylists.take(2).map { it.thumbnailUrl }
+                    com.moonwave.music.ui.component.MochyLibraryCategoryCard(
+                        title = "Playlists",
+                        count = onlinePlaylists.size,
+                        covers = playlistCovers,
+                        onClick = { onCategoryClick("Playlists") },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    val albumCovers = onlineAlbums.take(2).map { it.thumbnailUrl }
+                    com.moonwave.music.ui.component.MochyLibraryCategoryCard(
+                        title = "Albums",
+                        count = onlineAlbums.size,
+                        covers = albumCovers,
+                        onClick = { onCategoryClick("Albums") },
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    val artistCovers = onlineArtists.take(2).map { it.thumbnailUrl }
+                    com.moonwave.music.ui.component.MochyLibraryCategoryCard(
+                        title = "Artists",
+                        count = onlineArtists.size,
+                        covers = artistCovers,
+                        roundCovers = true,
+                        onClick = { onCategoryClick("Artists") },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+
+                val recentCovers = (onlineSongs.map { it.thumbnailUrl } + onlinePlaylists.map { it.thumbnailUrl }).filterNotNull().take(2)
+                com.moonwave.music.ui.component.MochyLibraryWideCard(
+                    title = "Recently added",
+                    count = onlineSongs.size + onlinePlaylists.size,
+                    covers = recentCovers,
+                    onClick = { onCategoryClick("Device Files") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        }
+
+        // Section header for unified library
+        if (unifiedItems.isNotEmpty()) {
+            item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(2) }) {
+                Text(
+                    text = "All items",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
+                )
+            }
+
             items(unifiedItems) { item ->
                 UnifiedLibraryCard(item)
             }

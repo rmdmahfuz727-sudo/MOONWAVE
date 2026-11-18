@@ -880,9 +880,39 @@ fun ExploreScreen(
                                                                                     max = 600.dp
                                                                                 ) else Modifier.fillMaxWidth()
                                                                             ) {
-                                                                                WelcomeGreetingBanner(
-                                                                                    userName = userProfile?.name
-                                                                                )
+                                                                                Column {
+                                                                                    WelcomeGreetingBanner(
+                                                                                        userName = userProfile?.name
+                                                                                    )
+                                                                                    val allHomeSongs = remember(homeSections, accountHistory) {
+                                                                                        val sectionSongs = homeSections.flatMap { it.items.filterIsInstance<SearchItem.Song>().map { s -> s.song } }
+                                                                                        if (sectionSongs.isNotEmpty()) sectionSongs else accountHistory
+                                                                                    }
+                                                                                    if (allHomeSongs.isNotEmpty()) {
+                                                                                        com.moonwave.music.ui.component.MochyGachaCard(
+                                                                                            pool = allHomeSongs,
+                                                                                            onPlaySong = { randomSong ->
+                                                                                                val idx = allHomeSongs.indexOf(randomSong).coerceAtLeast(0)
+                                                                                                viewModel.playOnlineSongWithQueue(randomSong, allHomeSongs, idx)
+                                                                                            }
+                                                                                        )
+                                                                                    }
+                                                                                    if (accountHistory.isNotEmpty()) {
+                                                                                        com.moonwave.music.ui.component.MochyRecentlyPlayedRow(
+                                                                                            recentSongs = accountHistory.take(15),
+                                                                                            onSongClick = { song ->
+                                                                                                val idx = accountHistory.indexOf(song).coerceAtLeast(0)
+                                                                                                viewModel.playOnlineSongWithQueue(song, accountHistory, idx)
+                                                                                            },
+                                                                                            onLikedClick = {
+                                                                                                viewModel.loadPlaylist("LM")
+                                                                                            },
+                                                                                            onHeaderClick = {
+                                                                                                isAccountVisible = true
+                                                                                            }
+                                                                                        )
+                                                                                    }
+                                                                                }
                                                                             }
                                                                         }
                                                                     }
@@ -1571,6 +1601,22 @@ fun ExploreScreen(
                                             }
                                         )
                                     }
+                                }
+                                item {
+                                    com.moonwave.music.ui.component.MochyForYouSection(
+                                        onCategoryClick = { category ->
+                                            onSearchActiveChange(false)
+                                            onSearch(category)
+                                        }
+                                    )
+                                }
+                                item {
+                                    com.moonwave.music.ui.component.MochyMoodsAndMomentsSection(
+                                        onMoodClick = { mood ->
+                                            onSearchActiveChange(false)
+                                            onSearch(mood)
+                                        }
+                                    )
                                 }
                             } else {
                                 items(suggestions) { suggestion ->

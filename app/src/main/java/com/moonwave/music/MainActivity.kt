@@ -35,14 +35,13 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.LaunchedEffect
@@ -229,12 +228,9 @@ class MainActivity : AppCompatActivity() {
                             }
                         }
 
-                        val navBarHeight by animateDpAsState(if (dynamicNavStyle) 64.dp else 80.dp, label = "navBarHeight")
-                        val navIconSize by animateDpAsState(if (dynamicNavStyle) 34.dp else 26.dp, label = "navIconSize")
-                        val navElevation by animateDpAsState(if (dynamicNavStyle) 8.dp else 3.dp, label = "navElevation")
                         val bottomPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
 
-                        NavigationBar(
+                        Box(
                             modifier = Modifier
                                 .graphicsLayer {
                                     val currentBase = animatedBaseTranslationState.value
@@ -243,13 +239,12 @@ class MainActivity : AppCompatActivity() {
                                     this.translationY = translationY
                                     this.alpha = if (translationY >= totalSlideDistPx - 1f) 0f else 1f
                                 }
-                                .height(navBarHeight + bottomPadding)
+                                .fillMaxWidth()
+                                .padding(bottom = bottomPadding)
                                 .onGloballyPositioned { coordinates ->
                                     val height = coordinates.size.height.toFloat()
                                     playerViewModel.setBottomNavHeight(height)
-                                },
-                            containerColor = MaterialTheme.colorScheme.surfaceContainer,
-                            tonalElevation = navElevation
+                                }
                         ) {
                             val items = listOf(
                                 Triple("explore", "Explore", R.drawable.ic_explore),
@@ -257,28 +252,25 @@ class MainActivity : AppCompatActivity() {
                                 Triple("effects", "Effects", R.drawable.ic_equalizer),
                                 Triple("settings", "Settings", R.drawable.ic_settings)
                             )
-                             items.forEach { (route, label, iconResId) ->
-                                val selected = currentDestination?.route == route
-                                NavigationBarItem(
-                                    selected = selected,
-                                    onClick = {
-                                        if (route == "explore") {
-                                            exploreViewModel.resetToHome()
-                                        }
-                                        if (!selected) {
-                                            currentNavController.navigate(route) {
-                                                popUpTo(currentNavController.graph.findStartDestination().id) {
-                                                    saveState = true
-                                                }
-                                                launchSingleTop = true
-                                                restoreState = true
+                            com.moonwave.music.ui.component.MochyNavigationBar(
+                                items = items,
+                                currentRoute = currentDestination?.route,
+                                hideNavLabels = hideNavLabels,
+                                onItemClick = { route ->
+                                    if (route == "explore") {
+                                        exploreViewModel.resetToHome()
+                                    }
+                                    if (currentDestination?.route != route) {
+                                        currentNavController.navigate(route) {
+                                            popUpTo(currentNavController.graph.findStartDestination().id) {
+                                                saveState = true
                                             }
+                                            launchSingleTop = true
+                                            restoreState = true
                                         }
-                                    },
-                                    icon = { Icon(painter = painterResource(id = iconResId), contentDescription = label, modifier = Modifier.size(navIconSize)) },
-                                    label = if (hideNavLabels) null else { { Text(label) } }
-                                )
-                            }
+                                    }
+                                }
+                            )
                         }
                     }
                 ) { paddingValues ->

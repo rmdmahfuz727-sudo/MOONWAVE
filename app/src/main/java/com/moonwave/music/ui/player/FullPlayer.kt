@@ -396,24 +396,8 @@ fun FullPlayer(
                 null
             }
 
-            // Album Art Container Placeholder with Mochy Cover Reflection
-            Box(
-                modifier = Modifier.size(albumArtSize),
-                contentAlignment = Alignment.BottomCenter
-            ) {
-                // Mochy glossy cover reflection
-                CoverReflection(
-                    artworkUrl = artworkUrl,
-                    coverHeight = { with(density) { albumArtSize.toPx() } },
-                    alpha = { if (isLyricsModeEnabled || lyricsRevealProgress > 0.05f) 0f else 0.45f },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(130.dp)
-                        .graphicsLayer {
-                            translationY = with(density) { 130.dp.toPx() }
-                        }
-                )
-            }
+            // Album Art Container Placeholder
+            Spacer(modifier = Modifier.size(albumArtSize))
 
             Spacer(modifier = Modifier.height(12.dp))
 

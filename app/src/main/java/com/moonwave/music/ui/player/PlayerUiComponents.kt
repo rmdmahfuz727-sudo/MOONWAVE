@@ -42,29 +42,8 @@ import com.moonwave.music.ui.component.press3D
  */
 @OptIn(ExperimentalFoundationApi::class)
 fun Modifier.basicMarqueeWithFadedEdges(
-    edgeWidth: Dp = 12.dp
+    edgeWidth: Dp = 8.dp
 ): Modifier = this
-    .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
-    .drawWithCache {
-        val edgeWidthPx = edgeWidth.toPx()
-        // Cache the brushes so they aren't recreated every frame
-        val leftBrush = Brush.horizontalGradient(
-            colors = listOf(Color.Transparent, Color.Black),
-            startX = 0f,
-            endX = edgeWidthPx
-        )
-        val rightBrush = Brush.horizontalGradient(
-            colors = listOf(Color.Black, Color.Transparent),
-            startX = size.width - edgeWidthPx,
-            endX = size.width
-        )
-        
-        onDrawWithContent {
-            drawContent()
-            drawRect(brush = leftBrush, blendMode = BlendMode.DstIn)
-            drawRect(brush = rightBrush, blendMode = BlendMode.DstIn)
-        }
-    }
     .basicMarquee()
     .padding(horizontal = edgeWidth)
 

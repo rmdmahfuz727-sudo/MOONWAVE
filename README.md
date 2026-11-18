@@ -49,11 +49,14 @@
 - **Loudness Analyzer & Volume Normalizer**: EBU R128 loudness measurement with automatic volume leveling.
 - **Gapless Playback & Crossfade**: Smooth transitions between songs.
 
-### 🎨 Material 3 Expressive UI & Mochy Motion Physics
-- **Liquid Glass Dynamic Effects**: Fluid real-time gradients extracted dynamically from album artwork.
+### 🎨 Mochy Music Design System & Expressive UI
+- **Mochy Floating Pill Navigation Bar**: Sleek floating frosted stadium navigation bar with spring-animated gliding indicator capsule, 3D bounce feedback, and fluid tab highlights.
+- **Mochy Gacha Random Plays**: Interactive Gacha hero card featuring an animated tumbling 3D die, vibrant gradient mesh, and instant random roll playback.
+- **Mochy Bento Library**: Bold header with avatar, "Search your library" pill bar, filter chips (All, Local & downloaded, Cached, Imported), "Import your music here!" banner, and 2x2 Bento category cards (Songs, Playlists, Albums, Artists) with tucked angled artwork stacks.
+- **Mochy Search & For You Grid**: 2-column pastel genre cards with dual tilted squircle artwork tiles (-24° & -6°) and "Moods & moments" pills.
+- **Pristine Player Typography**: Crystal-clear title & artist metadata sitting directly on the dynamic artwork gradient with zero bounding box artifacts.
 - **3D Tactile Press Physics**: Cards, buttons, and player art compress and tilt in 3D along your touch vector with spring physics.
 - **Continuous Squircle Curves**: True iOS-style superellipse corner curvature for cards, dialogs, and covers.
-- **Apple Music Glossy Cover Reflection**: High-performance software-blurred mirror mesh under the full player cover.
 - **Pulsing Interlude Dots & Particle Bursts**: Live glowing countdown dots during instrumental gaps and confetti particle bursts on like.
 - **Wavy Music Slider**: Interactive animated waveform seek bar.
 - **Sliding Queue Drawer & Sleep Timer**: Intuitive gestures and time-based sleep scheduler.
