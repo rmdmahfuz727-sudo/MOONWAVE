@@ -1,30 +1,31 @@
-name: MOONWAVE Release Build & Publish
+name: Build & Release MOONWAVE
 
 on:
   push:
+    branches: [ "main" ]
     tags:
       - 'v*'
   workflow_dispatch:
     inputs:
       release_version:
-        description: 'Release Version (e.g. 1.0.0)'
-        required: true
-        default: '1.0.0'
-      release_notes:
-        description: 'Release Notes summary'
+        description: 'Release Version (e.g. 1.8.1)'
         required: false
-        default: 'Production release of MOONWAVE Premium Android Music Player by Mahfuz Rahman.'
+        default: '1.8.1'
 
-permissions:
-  contents: write
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  release:
-    name: Build Release APK & AAB
+  build:
+    name: Build APKs & Create Release
     runs-on: ubuntu-latest
 
+    permissions:
+      contents: write
+
     steps:
-      - name: Checkout Code
+      - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Set up JDK 17
@@ -32,109 +33,101 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
-          cache: gradle
+          cache: 'gradle'
+
+      - name: Setup Keystore
+        id: setup_keystore
+        run: |
+          mkdir -p $HOME/keystores
+          KEYSTORE_FILE="$HOME/keystores/spatialflow.jks"
+          KEY_PASS="moonwave123"
+          KEY_ALIAS="moonwave"
+
+          if [ -n "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" ]; then
+            echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > "$KEYSTORE_FILE"
+            echo "ANDROID_KEYSTORE_PASSWORD=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" >> $GITHUB_ENV
+            echo "ANDROID_KEY_ALIAS=${{ secrets.ANDROID_KEY_ALIAS }}" >> $GITHUB_ENV
+            echo "ANDROID_KEY_ALIAS_PASSWORD=${{ secrets.ANDROID_KEY_ALIAS_PASSWORD }}" >> $GITHUB_ENV
+          elif [ -n "${{ secrets.KEYSTORE_BASE64 }}" ]; then
+            echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > "$KEYSTORE_FILE"
+            echo "ANDROID_KEYSTORE_PASSWORD=${{ secrets.STORE_PASSWORD || secrets.KEY_PASSWORD }}" >> $GITHUB_ENV
+            echo "ANDROID_KEY_ALIAS=${{ secrets.KEY_ALIAS }}" >> $GITHUB_ENV
+            echo "ANDROID_KEY_ALIAS_PASSWORD=${{ secrets.KEY_PASSWORD }}" >> $GITHUB_ENV
+          else
+            echo "Generating automated release signing keystore..."
+            keytool -genkey -v \
+              -keystore "$KEYSTORE_FILE" \
+              -storepass "$KEY_PASS" \
+              -alias "$KEY_ALIAS" \
+              -keypass "$KEY_PASS" \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000 \
+              -dname "CN=MOONWAVE, OU=Engineering, O=CodeTrio, C=US"
+            echo "ANDROID_KEYSTORE_PASSWORD=$KEY_PASS" >> $GITHUB_ENV
+            echo "ANDROID_KEY_ALIAS=$KEY_ALIAS" >> $GITHUB_ENV
+            echo "ANDROID_KEY_ALIAS_PASSWORD=$KEY_PASS" >> $GITHUB_ENV
+          fi
+          echo "ANDROID_KEYSTORE_PATH=$KEYSTORE_FILE" >> $GITHUB_ENV
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Setup Keystore for Signing
+      - name: Build Debug & Release APKs
+        run: ./gradlew assembleDebug assembleRelease --no-daemon --stacktrace
+
+      - name: Prepare Artifacts & Checksums
         run: |
-          mkdir -p ~/.android
-          if [ -n "${{ secrets.KEYSTORE_BASE64 }}" ]; then
-            echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > ~/.android/release.keystore
-            echo "KEYSTORE_PATH=$HOME/.android/release.keystore" >> $GITHUB_ENV
-            echo "KEY_ALIAS=${{ secrets.KEY_ALIAS }}" >> $GITHUB_ENV
-            echo "KEY_PASSWORD=${{ secrets.KEY_PASSWORD }}" >> $GITHUB_ENV
-            echo "STORE_PASSWORD=${{ secrets.STORE_PASSWORD }}" >> $GITHUB_ENV
-          else
-            echo "Generating release signing key..."
-            keytool -genkey -v \
-              -keystore ~/.android/release.keystore \
-              -storepass moonwavepass \
-              -alias moonwavekey \
-              -keypass moonwavepass \
-              -keyalg RSA \
-              -keysize 2048 \
-              -validity 10000 \
-              -dname "CN=MOONWAVE, OU=Engineering, O=Mahfuz Rahman, C=US"
-            echo "KEYSTORE_PATH=$HOME/.android/release.keystore" >> $GITHUB_ENV
-            echo "KEY_ALIAS=moonwavekey" >> $GITHUB_ENV
-            echo "KEY_PASSWORD=moonwavepass" >> $GITHUB_ENV
-            echo "STORE_PASSWORD=moonwavepass" >> $GITHUB_ENV
+          mkdir -p dist
+          if [ -f app/build/outputs/apk/release/app-release.apk ]; then
+            cp app/build/outputs/apk/release/app-release.apk dist/MOONWAVE-SpatialFlow-release.apk
           fi
-
-      - name: Build Debug & Release Artifacts
-        run: |
-          ./gradlew assembleDebug assembleRelease bundleRelease --no-daemon --stacktrace
-
-      - name: Sign Release APK
-        run: |
-          mkdir -p release-artifacts
-          UNSIGNED_APK=$(find app/build/outputs/apk/release -name "*.apk" | head -n 1)
-          
-          if [ -f "$UNSIGNED_APK" ]; then
-            jarsigner -verbose \
-              -sigalg SHA256withRSA \
-              -digestalg SHA-256 \
-              -keystore "$KEYSTORE_PATH" \
-              -storepass "$STORE_PASSWORD" \
-              -keypass "$KEY_PASSWORD" \
-              "$UNSIGNED_APK" "$KEY_ALIAS"
-            
-            cp "$UNSIGNED_APK" release-artifacts/MOONWAVE-release.apk
+          if [ -f app/build/outputs/apk/debug/app-debug.apk ]; then
+            cp app/build/outputs/apk/debug/app-debug.apk dist/MOONWAVE-SpatialFlow-debug.apk
           fi
+          cd dist
+          sha256sum *.apk > checksums.txt
+          ls -la
 
-          # Copy Debug APK
-          if [ -f "app/build/outputs/apk/debug/app-debug.apk" ]; then
-            cp app/build/outputs/apk/debug/app-debug.apk release-artifacts/MOONWAVE-debug.apk
-          fi
-
-          # Copy Release AAB
-          AAB_FILE=$(find app/build/outputs/bundle/release -name "*.aab" | head -n 1)
-          if [ -f "$AAB_FILE" ]; then
-            cp "$AAB_FILE" release-artifacts/MOONWAVE-release.aab
-          fi
-
-      - name: Upload Release Artifacts
+      - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: MOONWAVE-Production-Package
-          path: |
-            release-artifacts/MOONWAVE-release.apk
-            release-artifacts/MOONWAVE-release.aab
-            release-artifacts/MOONWAVE-debug.apk
+          name: MOONWAVE-SpatialFlow-APKs
+          path: dist/
+          retention-days: 14
 
-      - name: Create GitHub Release
+      - name: Create or Update GitHub Release
         uses: softprops/action-gh-release@v2
-        if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
+        if: startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
         with:
-          tag_name: ${{ github.ref_name || format('v{0}', github.event.inputs.release_version) }}
-          name: MOONWAVE v${{ github.event.inputs.release_version || '1.0.0' }} - Premium Android Music Player
+          tag_name: ${{ github.ref_name != 'main' && github.ref_name || 'v1.8.1' }}
+          name: MOONWAVE 1.8.1 (Powered by SpatialFlow)
+          prerelease: false
+          files: |
+            dist/MOONWAVE-SpatialFlow-release.apk
+            dist/MOONWAVE-SpatialFlow-debug.apk
+            dist/checksums.txt
           body: |
-            # 🌙 MOONWAVE v${{ github.event.inputs.release_version || '1.0.0' }}
-            ### Premium Android Music Player
-
-            Lead Developer: **[Mahfuz Rahman](https://github.com/rmdmahfuz727-sudo)**  
-            GitHub: [@rmdmahfuz727-sudo](https://github.com/rmdmahfuz727-sudo)
+            # 🌙 MOONWAVE 1.8.1 (SpatialFlow Edition)
+            
+            Premium Online & Offline Android Music Experience.
 
             ---
 
-            ### 🚀 What's New:
-            ${{ github.event.inputs.release_notes || 'Initial production release of MOONWAVE.' }}
+            ### 🚀 Major Highlights & Features:
+            * **YouTube Music Streaming**: Stream millions of songs directly via high-speed caching & background prefetch.
+            * **NewPipe Engine**: Native on-device YouTube stream resolution without proxy dependencies.
+            * **Karaoke Synchronized Lyrics**: Real-time word-by-word karaoke highlighting across 6+ providers (SyncLRC, Apple Music, Spotify, LRCLIB, YouTube Music, Paxsenix).
+            * **Music Haptics**: Beat-based dynamic vibration feedback & rhythm synchronization.
+            * **Material 3 Expressive UI**: Liquid glass visual effect, wavy slider, artwork pager, sliding queue drawer.
+            * **Offline Media Library**: MediaStore scanner, Albums, Artists, Folders, Smart Playlists.
+            * **Hardware Audio Effects**: Equalizer, Bass Boost, Loudness Analyzer, Volume Normalizer.
+            * **Song Downloader**: High-speed offline downloads with progress notifications.
+            * **Personal Recap**: Listening stats, top artists, time spent listening.
+            * **Desktop Widgets**: Aura (2x2), Bridge (4x2), and Dashboard (4x4) interactive widgets.
 
-            - 🎵 **High-Fidelity Audio Engine**: AndroidX Media3 ExoPlayer with gapless playback and audio focus.
-            - 🎛️ **Hardware Audio Lab**: 5/10-Band Graphic Equalizer, Bass Boost, 3D Surround Virtualizer, and Reverb presets.
-            - 📜 **Synchronized Lyrics**: LRCLIB official API integration with karaoke real-time highlights and tap-to-seek.
-            - 🎨 **Customization Center**: 7 Player Layouts (Flagship, Vinyl Turntable, Full-screen Artwork, Minimal, Gradient, Lyrics-Focused, Compact), 4 Theme Modes, and 6 Accent Colors.
-            - 📂 **Local Music Library**: MediaStore indexer, Albums, Artists, Folders, Smart Playlists, and custom playlist editor.
-
-            ### 📦 Downloadable Assets:
-            - **`MOONWAVE-release.apk`**: Signed production APK ready to install.
-            - **`MOONWAVE-debug.apk`**: Debug build for developer testing.
-            - **`MOONWAVE-release.aab`**: Android App Bundle for Google Play distribution.
-          files: |
-            release-artifacts/MOONWAVE-release.apk
-            release-artifacts/MOONWAVE-release.aab
-            release-artifacts/MOONWAVE-debug.apk
+            ### 📦 Download:
+            - **[MOONWAVE-SpatialFlow-release.apk](dist/MOONWAVE-SpatialFlow-release.apk)** (Signed production release)
+            - **[MOONWAVE-SpatialFlow-debug.apk](dist/MOONWAVE-SpatialFlow-debug.apk)** (Developer debug build)
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
