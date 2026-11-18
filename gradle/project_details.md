@@ -2458,7 +2458,7 @@ jobs:
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="?attr/colorSurface"
-    tools:context="com.codetrio.spatialflow.ui.SettingsFragment">
+    tools:context="com.moonwave.music.ui.SettingsFragment">
 
     <androidx.core.widget.NestedScrollView
         android:id="@+id/settingsScroll"
@@ -3956,7 +3956,7 @@ jobs:
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="?attr/colorSurface"
-    tools:context="com.codetrio.spatialflow.ui.SettingsFragment">
+    tools:context="com.moonwave.music.ui.SettingsFragment">
 
     <androidx.core.widget.NestedScrollView
         android:id="@+id/settingsScroll"
@@ -4316,17 +4316,17 @@ jobs:
 
     <fragment
         android:id="@+id/navigation_player"
-        android:name="com.codetrio.spatialflow.ui.PlayerFragment"
+        android:name="com.moonwave.music.ui.PlayerFragment"
         android:label="Player" />
 
     <fragment
         android:id="@+id/navigation_effects"
-        android:name="com.codetrio.spatialflow.ui.EffectsFragment"
+        android:name="com.moonwave.music.ui.EffectsFragment"
         android:label="Effects" />
 
     <fragment
         android:id="@+id/navigation_settings"
-        android:name="com.codetrio.spatialflow.ui.SettingsFragment"
+        android:name="com.moonwave.music.ui.SettingsFragment"
         android:label="Settings" />
 
 </navigation>
@@ -4578,7 +4578,7 @@ jobs:
         <item name="fontFamily">sans-serif-medium</item>
 
     </style>
-    <style name="Base.Theme.SpatialFlow" parent="Theme.Material3.DayNight">
+    <style name="Base.Theme.Moonwave" parent="Theme.Material3.DayNight">
         <item name="colorPrimary">@color/md_theme_primary</item>
 
         <!-- System bars styling -->
@@ -4629,7 +4629,7 @@ jobs:
 <resources>
 
     <!-- Light app theme -->
-    <style name="Theme.SpatialFlow" parent="Theme.Material3.DynamicColors.Light.NoActionBar">
+    <style name="Theme.Moonwave" parent="Theme.Material3.DynamicColors.Light.NoActionBar">
         <!-- Status Bar -->
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:windowLightStatusBar">true</item>
@@ -4739,7 +4739,7 @@ jobs:
 
 ``xml
 <resources>
-    <style name="Theme.SpatialFlow" parent="Theme.Material3.DynamicColors.Dark.NoActionBar">
+    <style name="Theme.Moonwave" parent="Theme.Material3.DynamicColors.Dark.NoActionBar">
         <!-- Status Bar -->
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:windowLightStatusBar">false</item>
@@ -4918,12 +4918,12 @@ jobs:
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS"/>
 
     <application
-        android:name=".SpatialFlowApplication"
+        android:name=".MoonwaveApplication"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.SpatialFlow"
+        android:theme="@style/Theme.Moonwave"
         android:enableOnBackInvokedCallback="true"
         tools:targetApi="31">
         <activity
@@ -4933,7 +4933,7 @@ jobs:
             android:resizeableActivity="true"
             android:configChanges="screenSize|smallestScreenSize|screenLayout|orientation"
             android:label="@string/app_name"
-            android:theme="@style/Theme.SpatialFlow">
+            android:theme="@style/Theme.Moonwave">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -4991,11 +4991,11 @@ def ciKeyAlias = System.getenv("ANDROID_KEY_ALIAS")
 def ciKeyPassword = System.getenv("ANDROID_KEY_ALIAS_PASSWORD")
 
 android {
-    namespace 'com.codetrio.spatialflow'
+    namespace 'com.moonwave.music'
     compileSdk 36
 
     defaultConfig {
-        applicationId "com.codetrio.spatialflow"
+        applicationId "com.moonwave.music"
         minSdk 24
         targetSdk 35
         versionCode 6

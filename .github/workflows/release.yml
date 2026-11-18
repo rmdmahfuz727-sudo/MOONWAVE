@@ -8,9 +8,9 @@ on:
   workflow_dispatch:
     inputs:
       release_version:
-        description: 'Release Version (e.g. 1.8.1)'
+        description: 'Release Version (e.g. 2.0.0)'
         required: false
-        default: '1.8.1'
+        default: '2.0.0'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -35,26 +35,26 @@ jobs:
           distribution: 'temurin'
           cache: 'gradle'
 
-      - name: Setup Keystore
+      - name: Setup Dedicated MOONWAVE Release Keystore
         id: setup_keystore
         run: |
           mkdir -p $HOME/keystores
-          KEYSTORE_FILE="$HOME/keystores/spatialflow.jks"
-          KEY_PASS="moonwave123"
-          KEY_ALIAS="moonwave"
+          KEYSTORE_FILE="$HOME/keystores/moonwave.jks"
+          KEY_PASS="moonwave_release_mahfuz_2026"
+          KEY_ALIAS="moonwave_release_key"
 
-          if [ -n "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" ]; then
-            echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > "$KEYSTORE_FILE"
-            echo "ANDROID_KEYSTORE_PASSWORD=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" >> $GITHUB_ENV
-            echo "ANDROID_KEY_ALIAS=${{ secrets.ANDROID_KEY_ALIAS }}" >> $GITHUB_ENV
-            echo "ANDROID_KEY_ALIAS_PASSWORD=${{ secrets.ANDROID_KEY_ALIAS_PASSWORD }}" >> $GITHUB_ENV
+          if [ -n "${{ secrets.MOONWAVE_KEYSTORE_BASE64 }}" ]; then
+            echo "${{ secrets.MOONWAVE_KEYSTORE_BASE64 }}" | base64 --decode > "$KEYSTORE_FILE"
+            echo "ANDROID_KEYSTORE_PASSWORD=${{ secrets.MOONWAVE_KEYSTORE_PASSWORD }}" >> $GITHUB_ENV
+            echo "ANDROID_KEY_ALIAS=${{ secrets.MOONWAVE_KEY_ALIAS }}" >> $GITHUB_ENV
+            echo "ANDROID_KEY_ALIAS_PASSWORD=${{ secrets.MOONWAVE_KEY_PASSWORD }}" >> $GITHUB_ENV
           elif [ -n "${{ secrets.KEYSTORE_BASE64 }}" ]; then
             echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > "$KEYSTORE_FILE"
             echo "ANDROID_KEYSTORE_PASSWORD=${{ secrets.STORE_PASSWORD || secrets.KEY_PASSWORD }}" >> $GITHUB_ENV
             echo "ANDROID_KEY_ALIAS=${{ secrets.KEY_ALIAS }}" >> $GITHUB_ENV
             echo "ANDROID_KEY_ALIAS_PASSWORD=${{ secrets.KEY_PASSWORD }}" >> $GITHUB_ENV
           else
-            echo "Generating automated release signing keystore..."
+            echo "Generating dedicated MOONWAVE release signature key for Mahfuz Rahman..."
             keytool -genkey -v \
               -keystore "$KEYSTORE_FILE" \
               -storepass "$KEY_PASS" \
@@ -63,7 +63,7 @@ jobs:
               -keyalg RSA \
               -keysize 2048 \
               -validity 10000 \
-              -dname "CN=MOONWAVE, OU=Engineering, O=CodeTrio, C=US"
+              -dname "CN=MOONWAVE Music Player, OU=Engineering, O=Mahfuz Rahman, C=US"
             echo "ANDROID_KEYSTORE_PASSWORD=$KEY_PASS" >> $GITHUB_ENV
             echo "ANDROID_KEY_ALIAS=$KEY_ALIAS" >> $GITHUB_ENV
             echo "ANDROID_KEY_ALIAS_PASSWORD=$KEY_PASS" >> $GITHUB_ENV
@@ -80,10 +80,10 @@ jobs:
         run: |
           mkdir -p dist
           if [ -f app/build/outputs/apk/release/app-release.apk ]; then
-            cp app/build/outputs/apk/release/app-release.apk dist/MOONWAVE-SpatialFlow-release.apk
+            cp app/build/outputs/apk/release/app-release.apk dist/MOONWAVE-release.apk
           fi
           if [ -f app/build/outputs/apk/debug/app-debug.apk ]; then
-            cp app/build/outputs/apk/debug/app-debug.apk dist/MOONWAVE-SpatialFlow-debug.apk
+            cp app/build/outputs/apk/debug/app-debug.apk dist/MOONWAVE-debug.apk
           fi
           cd dist
           sha256sum *.apk > checksums.txt
@@ -92,7 +92,7 @@ jobs:
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: MOONWAVE-SpatialFlow-APKs
+          name: MOONWAVE-APKs
           path: dist/
           retention-days: 14
 
@@ -100,34 +100,41 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
         with:
-          tag_name: ${{ github.ref_name != 'main' && github.ref_name || 'v1.8.1' }}
-          name: MOONWAVE 1.8.1 (Powered by SpatialFlow)
+          tag_name: ${{ github.ref_name != 'main' && github.ref_name || 'v2.0.0' }}
+          name: MOONWAVE v2.0.0 - Premium Music Experience
           prerelease: false
           files: |
-            dist/MOONWAVE-SpatialFlow-release.apk
-            dist/MOONWAVE-SpatialFlow-debug.apk
+            dist/MOONWAVE-release.apk
+            dist/MOONWAVE-debug.apk
             dist/checksums.txt
           body: |
-            # 🌙 MOONWAVE 1.8.1 (SpatialFlow Edition)
-            
-            Premium Online & Offline Android Music Experience.
+            # 🌙 MOONWAVE v2.0.0
+            ### Official Original Flagship Release
+
+            Lead Developer & Maintainer: **[Mahfuz Rahman](https://github.com/rmdmahfuz727-sudo)**  
+            GitHub: [@rmdmahfuz727-sudo](https://github.com/rmdmahfuz727-sudo)
 
             ---
 
-            ### 🚀 Major Highlights & Features:
-            * **YouTube Music Streaming**: Stream millions of songs directly via high-speed caching & background prefetch.
-            * **NewPipe Engine**: Native on-device YouTube stream resolution without proxy dependencies.
-            * **Karaoke Synchronized Lyrics**: Real-time word-by-word karaoke highlighting across 6+ providers (SyncLRC, Apple Music, Spotify, LRCLIB, YouTube Music, Paxsenix).
-            * **Music Haptics**: Beat-based dynamic vibration feedback & rhythm synchronization.
-            * **Material 3 Expressive UI**: Liquid glass visual effect, wavy slider, artwork pager, sliding queue drawer.
-            * **Offline Media Library**: MediaStore scanner, Albums, Artists, Folders, Smart Playlists.
-            * **Hardware Audio Effects**: Equalizer, Bass Boost, Loudness Analyzer, Volume Normalizer.
-            * **Song Downloader**: High-speed offline downloads with progress notifications.
-            * **Personal Recap**: Listening stats, top artists, time spent listening.
-            * **Desktop Widgets**: Aura (2x2), Bridge (4x2), and Dashboard (4x4) interactive widgets.
+            ### 🚀 Highlights & Features:
+            * 🎨 **Original MOONWAVE Visual Identity**: Official glowing lunar crescent logo, midnight black, deep navy, and electric cyan design system.
+            * 🎵 **YouTube Music Online Streaming**: Instant online streaming, trending charts, artist and album discovery, backed by intelligent 6-hour caching and background prefetch.
+            * ⚡ **NewPipe Extractor Engine**: Direct on-device stream resolution with zero third-party proxy dependencies.
+            * 🎤 **Synchronized Karaoke Lyrics Engine**: Real-time word-by-word karaoke highlighting across 6+ providers (SyncLRC, Apple Music, Spotify, LRCLIB, YouTube Music, Paxsenix).
+            * 📳 **Music Haptics**: Dynamic tactile beat vibration feedback synced with music rhythms.
+            * 🎛️ **Studio Audio Lab**: 10-band hardware equalizer, bass boost, EBU R128 loudness analyzer, and volume normalizer.
+            * 📁 **Offline Local Library**: MediaStore scanner, Albums, Artists, Folders, Smart Playlists, and tag editor.
+            * ⬇️ **One-Click Song Downloader**: High-speed offline downloads with progress notifications.
+            * 🪟 **Desktop Widgets**: Aura (2x2), Bridge (4x2), and Dashboard (4x4) interactive widgets.
+            * 🔐 **Unique Release Signature**: Built and signed with Mahfuz Rahman's dedicated MOONWAVE release signature key.
 
-            ### 📦 Download:
-            - **[MOONWAVE-SpatialFlow-release.apk](dist/MOONWAVE-SpatialFlow-release.apk)** (Signed production release)
-            - **[MOONWAVE-SpatialFlow-debug.apk](dist/MOONWAVE-SpatialFlow-debug.apk)** (Developer debug build)
+            ### 🤝 Attribution & Open Source Credits:
+            * Portions of the audio architecture, UI components, and streaming design are derived from **SpatialFlow** by **Shubham Karande** ([@MythicalSHUB](https://github.com/MythicalSHUB)) under the **Apache License 2.0**.
+            * Lyrics parsing utilities derived from **Gramophone** ([@AkaneTan](https://github.com/AkaneTan)) under **GPL-3.0**.
+            * All third-party libraries (AndroidX Media3, NewPipeExtractor, LRCLIB, Jaudiotagger, Coil, FFmpegKit) are gratefully acknowledged in accordance with their respective open-source licenses.
+
+            ### 📦 Download Assets:
+            - **[MOONWAVE-release.apk](dist/MOONWAVE-release.apk)** (Signed production release APK)
+            - **[MOONWAVE-debug.apk](dist/MOONWAVE-debug.apk)** (Developer debug APK)
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

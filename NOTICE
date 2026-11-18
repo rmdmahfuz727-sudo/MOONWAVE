@@ -1,114 +1,59 @@
-SpatialFlow
-Copyright © 2026 Shubham Karande.
+MOONWAVE
+Copyright © 2026 Mahfuz Rahman.
 All Rights Reserved Except Where Explicitly Licensed.
 
 ===============================================================================
                                 NOTICE
 ===============================================================================
 
-Thank you for using SpatialFlow.
+MOONWAVE is a premium hybrid online and offline Android music platform developed
+and maintained by Mahfuz Rahman (https://github.com/rmdmahfuz727-sudo).
 
-SpatialFlow is an open-source Android music player developed and maintained by
-Shubham Karande. The project represents significant investment in software
-engineering, user experience design, audio technologies, and community-driven
-development.
-
-This NOTICE file accompanies the Apache License, Version 2.0, under which the
-source code is distributed.
+This project incorporates, adapts, and builds upon code and architectural designs
+from open-source projects in full compliance with their respective licenses:
 
 ===============================================================================
-ATTRIBUTION
+UPSTREAM ATTRIBUTIONS
 ===============================================================================
 
-If you use, modify, adapt, port, or incorporate substantial portions of
-SpatialFlow's source code, application architecture, user interface, custom
-components, algorithms, resources, or implementation into another project,
-appropriate attribution to the original project is strongly requested.
+1. SpatialFlow
+   Copyright © 2026 Shubham Karande
+   Licensed under the Apache License, Version 2.0
+   https://github.com/MythicalSHUB/SpatialFlow
+   
+   Architectural design, NewPipe streaming integration, volume normalization,
+   and UI components are derived from the open-source SpatialFlow project.
+   Appropriate attribution to Shubham Karande and CodeTrio is gratefully acknowledged.
 
-Suggested attribution:
+2. Gramophone
+   Copyright © 2023-2024 AkaneTan
+   Licensed under the GNU General Public License v3.0 (GPL-3.0)
+   https://github.com/AkaneTan/Gramophone
+   
+   Synchronized lyrics parsing, LRC processing, and semantic lyric models
+   (`org.akanework.gramophone.logic.utils.*`) are included under GPL-3.0.
 
-    Based on SpatialFlow by Shubham Karande
-    https://github.com/MythicalSHUB/SpatialFlow
+3. LRCLIB
+   Copyright © 2023 tranxuanthang
+   https://github.com/tranxuanthang/lrclib
+   Lyrics database and API client integration.
 
-or
+4. AndroidX Media3 / ExoPlayer
+   Copyright © The Android Open Source Project
+   Licensed under the Apache License, Version 2.0
 
-    This project incorporates code from SpatialFlow
-    Copyright © 2026 Shubham Karande
-    https://github.com/MythicalSHUB/SpatialFlow
+5. NewPipe Extractor
+   Copyright © Team NewPipe
+   Licensed under the GNU General Public License v3.0 (GPL-3.0)
 
-While the Apache License 2.0 does not require visible attribution in product
-documentation, README files, or application interfaces, acknowledging the
-original project is greatly appreciated and helps support continued open-source
-development.
-
-===============================================================================
-BRANDING
-===============================================================================
-
-The Apache License applies only to the source code unless otherwise stated.
-
-The following are NOT licensed under the Apache License and may not be copied,
-redistributed, or used to imply endorsement without prior written permission
-from the copyright holder:
-
-• SpatialFlow name
-• SpatialFlow logo
-• Application icon
-• Branding and visual identity
-• Screenshots and promotional graphics
-• Artwork and marketing materials
-• Official release assets
-• Website branding
-• Social media branding
-• Documentation graphics
-
-Forks and derivative works must not present themselves as the official
-SpatialFlow project or imply affiliation with the original author.
+6. Jaudiotagger
+   Copyright © Paul Taylor
+   Licensed under the GNU Lesser General Public License (LGPL)
 
 ===============================================================================
-THIRD-PARTY SOFTWARE
+BRANDING & LOGO
 ===============================================================================
 
-SpatialFlow includes or depends upon third-party open-source libraries,
-frameworks, and services, each of which remains licensed under its respective
-license.
-
-Users and redistributors are responsible for complying with all applicable
-third-party license terms.
-
-===============================================================================
-CONTRIBUTIONS
-===============================================================================
-
-Unless explicitly stated otherwise, any contribution intentionally submitted
-for inclusion in SpatialFlow shall be licensed under the same terms as the
-project's Apache License, Version 2.0.
-
-===============================================================================
-SUPPORT THE PROJECT
-===============================================================================
-
-If SpatialFlow has been helpful to you or your project, please consider:
-
-• Starring the GitHub repository
-• Providing attribution when using substantial portions of the project
-• Reporting issues and contributing improvements
-• Sharing the project with the community
-
-GitHub Repository:
-https://github.com/MythicalSHUB/SpatialFlow
-
-===============================================================================
-DISCLAIMER
-===============================================================================
-
-This NOTICE file is provided for informational purposes only and supplements
-the Apache License, Version 2.0.
-
-Nothing in this NOTICE modifies, limits, or supersedes the rights granted under
-the Apache License.
-
-Any requests regarding branding, trademarks, logos, commercial partnerships,
-or other permissions should be directed to the project maintainer.
-
-===============================================================================
+The MOONWAVE name, custom logo (crescent moon with soundwave emblem), branding,
+and visual identity are Copyright © 2026 Mahfuz Rahman.
+All rights reserved.

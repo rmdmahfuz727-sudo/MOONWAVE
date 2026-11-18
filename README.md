@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="app/src/main/res/mipmap-xxxhdpi/ic_launcher.webp" width="120" alt="MOONWAVE Logo" />
+  <img src="docs/moonwave_banner.jpg" width="100%" style="border-radius: 16px;" alt="MOONWAVE Music Player" />
 </p>
 
 <h1 align="center">MOONWAVE</h1>
