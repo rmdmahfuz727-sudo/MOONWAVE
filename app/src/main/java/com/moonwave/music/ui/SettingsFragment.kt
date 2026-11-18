@@ -3014,6 +3014,62 @@ private fun CreditsCard(onOpenUrl: (String) -> Unit) {
                 }
             }
         }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Open Source Attribution: Mochy Music
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(24.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+            )
+        ) {
+            Column(
+                modifier = Modifier
+                    .padding(24.dp)
+                    .fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                coil.compose.AsyncImage(
+                    model = "https://github.com/realidkroo.png",
+                    contentDescription = "realidkroo",
+                    modifier = Modifier
+                        .size(72.dp)
+                        .clip(CircleShape),
+                    contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                )
+                
+                Text(
+                    text = "Mochy Music (realidkroo)",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.padding(top = 12.dp)
+                )
+                Text(
+                    text = "UI Design & Motion Physics",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.padding(top = 2.dp)
+                )
+                Text(
+                    text = "3D tactile press physics, squircle superellipses, and cover reflection animations",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 4.dp),
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                )
+                
+                Row(
+                    modifier = Modifier.padding(top = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    SocialIconButton(icon = R.drawable.ic_github, onClick = { onOpenUrl("https://github.com/realidkroo/Mochy-Music") })
+                }
+            }
+        }
     }
 }
 

@@ -28,6 +28,8 @@ import coil.compose.AsyncImagePainter
 import coil.request.ImageRequest
 import com.moonwave.music.R
 import com.moonwave.music.model.SongItem
+import com.moonwave.music.ui.component.SmoothCornerShape
+import com.moonwave.music.ui.component.press3D
 import com.moonwave.music.viewmodel.PlayerSharedViewModel
 
 @Composable
@@ -85,7 +87,9 @@ fun ArtworkPager(
 
             Box(
                 modifier = Modifier
-                    .fillMaxSize(),
+                    .fillMaxSize()
+                    .press3D(maxTilt = 7f, pressedScale = 0.95f)
+                    .clip(SmoothCornerShape(26.dp)),
                 contentAlignment = Alignment.Center
             ) {
                 if (!artworkUrl.isNullOrEmpty() && !isError) {

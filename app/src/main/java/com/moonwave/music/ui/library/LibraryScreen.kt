@@ -138,6 +138,8 @@ import com.moonwave.music.data.innertube.OnlinePlaylist
 import com.moonwave.music.data.innertube.OnlineSong
 import com.moonwave.music.model.SongItem
 import com.moonwave.music.model.toSongItem
+import com.moonwave.music.ui.component.SmoothCornerShape
+import com.moonwave.music.ui.component.press3D
 import com.moonwave.music.ui.CreateLocalPlaylistDialog
 import com.moonwave.music.ui.LocalPlaylistPickerDialog
 import com.moonwave.music.ui.SongActionsBottomSheet
@@ -1092,7 +1094,8 @@ private fun UnifiedLibraryCard(item: UnifiedLibraryItem) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
+            .press3D(maxTilt = 5f, pressedScale = 0.96f)
+            .clip(SmoothCornerShape(16.dp))
             .clickable { item.onClick() }
             .padding(8.dp),
         horizontalAlignment = Alignment.CenterHorizontally
@@ -1101,7 +1104,7 @@ private fun UnifiedLibraryCard(item: UnifiedLibraryItem) {
             modifier = Modifier
                 .aspectRatio(1f)
                 .fillMaxWidth()
-                .clip(if (item.isCircle) CircleShape else RoundedCornerShape(12.dp))
+                .clip(if (item.isCircle) CircleShape else SmoothCornerShape(14.dp))
                 .background(MaterialTheme.colorScheme.surfaceContainerHigh),
             contentAlignment = Alignment.Center
         ) {
@@ -1571,8 +1574,10 @@ private fun OnlinePlaylistCard(
         modifier = Modifier
             .fillMaxWidth()
             .height(220.dp)
-            .clip(RoundedCornerShape(12.dp))
+            .press3D(maxTilt = 5f, pressedScale = 0.96f)
+            .clip(SmoothCornerShape(16.dp))
             .clickable { onClick() },
+        shape = SmoothCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -1883,8 +1888,10 @@ private fun OnlineAlbumCard(
         modifier = Modifier
             .fillMaxWidth()
             .height(220.dp)
-            .clip(RoundedCornerShape(12.dp))
+            .press3D(maxTilt = 5f, pressedScale = 0.96f)
+            .clip(SmoothCornerShape(16.dp))
             .clickable { onClick() },
+        shape = SmoothCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {

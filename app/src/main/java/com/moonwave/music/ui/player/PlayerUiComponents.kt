@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.sp
 import com.moonwave.music.R
 import com.moonwave.music.data.lyrics.LyricsResult
 import com.moonwave.music.model.SongItem
+import com.moonwave.music.ui.component.press3D
 
 /**
  * Custom Compose extension to render a marquee with smooth horizontal alpha-faded edges.
@@ -116,6 +117,7 @@ internal fun SplitLikeDislikeChip(
     Row(
         modifier = Modifier
             .height(36.dp)
+            .press3D(maxTilt = 4f, pressedScale = 0.96f)
             .clip(CircleShape)
             .background(backgroundColor),
         verticalAlignment = Alignment.CenterVertically
@@ -202,6 +204,7 @@ internal fun PillChip(
     Box(
         modifier = modifier
             .height(36.dp)
+            .press3D(maxTilt = 4f, pressedScale = 0.95f)
             .clip(CircleShape)
             .background(backgroundColor)
             .drawBehind {

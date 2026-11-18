@@ -74,6 +74,8 @@ import com.moonwave.music.R
 import com.moonwave.music.data.lyrics.LyricLine
 import com.moonwave.music.data.lyrics.LyricsResult
 import com.moonwave.music.model.SongItem
+import com.moonwave.music.ui.component.CoverReflection
+import com.moonwave.music.ui.component.press3D
 import com.moonwave.music.viewmodel.PlayerSharedViewModel
 
 /**
@@ -383,11 +385,35 @@ fun FullPlayer(
 
             Spacer(modifier = Modifier.height(topOffset - (statusBarTopDp + 68.dp)))
 
-            // Album Art Container Placeholder (ArtworkPager is rendered at this absolute position)
+            val currentSong = uiState.currentSong
+            val rawUri = currentSong?.getAlbumArtUri()
+            val videoId = currentSong?.videoId
+            val artworkUrl = if (rawUri != null && rawUri.toString().isNotEmpty()) {
+                SongItem.enhanceThumbnailUrl(rawUri.toString())
+            } else if (!videoId.isNullOrEmpty()) {
+                "https://img.youtube.com/vi/$videoId/hqdefault.jpg"
+            } else {
+                null
+            }
+
+            // Album Art Container Placeholder with Mochy Cover Reflection
             Box(
-                modifier = Modifier
-                    .size(albumArtSize)
-            )
+                modifier = Modifier.size(albumArtSize),
+                contentAlignment = Alignment.BottomCenter
+            ) {
+                // Mochy glossy cover reflection
+                CoverReflection(
+                    artworkUrl = artworkUrl,
+                    coverHeight = { with(density) { albumArtSize.toPx() } },
+                    alpha = { if (isLyricsModeEnabled || lyricsRevealProgress > 0.05f) 0f else 0.45f },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(130.dp)
+                        .graphicsLayer {
+                            translationY = with(density) { 130.dp.toPx() }
+                        }
+                )
+            }
 
             Spacer(modifier = Modifier.height(12.dp))
 
@@ -507,7 +533,7 @@ fun FullPlayer(
                     onClick = {
                         val shareIntent = Intent().apply {
                             action = Intent.ACTION_SEND
-                            putExtra(Intent.EXTRA_TEXT, "Listening on SpatialFlow Check out : https://music.youtube.com/watch?v=${uiState.currentSong?.videoId}")
+                            putExtra(Intent.EXTRA_TEXT, "Listening on MOONWAVE Check out : https://music.youtube.com/watch?v=${uiState.currentSong?.videoId}")
                             type = "text/plain"
                         }
                         context.startActivity(Intent.createChooser(shareIntent, "Share Track"))
@@ -592,6 +618,7 @@ fun FullPlayer(
                                     .animateWidth(interactionSource)
                                     .weight(1f)
                                     .height(76.dp)
+                                    .press3D(maxTilt = 5f, pressedScale = 0.94f)
                             },
                             interactionSource = interactionSource,
                             shape = RoundedCornerShape(cornerRadius),
@@ -634,6 +661,7 @@ fun FullPlayer(
                                     .animateWidth(interactionSource)
                                     .weight(1.2f)
                                     .height(76.dp)
+                                    .press3D(maxTilt = 6f, pressedScale = 0.93f)
                             },
                             interactionSource = interactionSource,
                             shape = RoundedCornerShape(cornerRadius),
@@ -676,6 +704,7 @@ fun FullPlayer(
                                     .animateWidth(interactionSource)
                                     .weight(1f)
                                     .height(76.dp)
+                                    .press3D(maxTilt = 5f, pressedScale = 0.94f)
                             },
                             interactionSource = interactionSource,
                             shape = RoundedCornerShape(cornerRadius),

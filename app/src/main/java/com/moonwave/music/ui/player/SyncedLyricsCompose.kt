@@ -671,6 +671,13 @@ private fun InterludeItem(
             wavelength = WavyProgressIndicatorDefaults.LinearDeterminateWavelength,
             amplitude = { p -> WavyProgressIndicatorDefaults.indicatorAmplitude(p) * 2.5f }
         )
+
+        LyricsInterludeDots(
+            modifier = Modifier.width(56.dp),
+            activeColor = accentColor,
+            dotSize = 7.dp,
+            dotSpacing = 11.dp
+        )
     }
 }
 

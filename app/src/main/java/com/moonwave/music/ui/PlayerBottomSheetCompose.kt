@@ -95,6 +95,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.moonwave.music.MainActivity
 import com.moonwave.music.R
 import com.moonwave.music.model.SongItem
+import com.moonwave.music.ui.component.SmoothCornerShape
+import com.moonwave.music.ui.component.press3D
 import com.moonwave.music.ui.player.ArtworkPager
 import com.moonwave.music.ui.player.FullPlayerScreen
 import com.moonwave.music.ui.player.PlayerUiState
@@ -1285,6 +1287,7 @@ private fun MiniPlayerContentInternal(
     Row(
         modifier = modifier
             .fillMaxSize()
+            .press3D(maxTilt = 3.5f, pressedScale = 0.985f)
             .clickable(onClick = onClick)
             .padding(start = 10.dp, end = 8.dp, top = 10.dp, bottom = 10.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -1382,7 +1385,10 @@ private fun MiniPlayerContentInternal(
 
         // Controls Row using custom icons painterResource
         Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = { viewModel.playPreviousSong() }) {
+            IconButton(
+                onClick = { viewModel.playPreviousSong() },
+                modifier = Modifier.press3D(maxTilt = 5f, pressedScale = 0.92f)
+            ) {
                 Icon(
                     painter = painterResource(R.drawable.ic_skip_previous),
                     contentDescription = "Previous",
@@ -1397,6 +1403,7 @@ private fun MiniPlayerContentInternal(
                 },
                 modifier = Modifier
                     .size(42.dp)
+                    .press3D(maxTilt = 6f, pressedScale = 0.90f)
                     .background(playBgColor, CircleShape)
             ) {
                 Icon(
@@ -1407,7 +1414,10 @@ private fun MiniPlayerContentInternal(
                 )
             }
 
-            IconButton(onClick = { viewModel.playNextSong() }) {
+            IconButton(
+                onClick = { viewModel.playNextSong() },
+                modifier = Modifier.press3D(maxTilt = 5f, pressedScale = 0.92f)
+            ) {
                 Icon(
                     painter = painterResource(R.drawable.ic_skip_next),
                     contentDescription = "Next",

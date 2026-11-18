@@ -49,8 +49,12 @@
 - **Loudness Analyzer & Volume Normalizer**: EBU R128 loudness measurement with automatic volume leveling.
 - **Gapless Playback & Crossfade**: Smooth transitions between songs.
 
-### 🎨 Material 3 Expressive UI
+### 🎨 Material 3 Expressive UI & Mochy Motion Physics
 - **Liquid Glass Dynamic Effects**: Fluid real-time gradients extracted dynamically from album artwork.
+- **3D Tactile Press Physics**: Cards, buttons, and player art compress and tilt in 3D along your touch vector with spring physics.
+- **Continuous Squircle Curves**: True iOS-style superellipse corner curvature for cards, dialogs, and covers.
+- **Apple Music Glossy Cover Reflection**: High-performance software-blurred mirror mesh under the full player cover.
+- **Pulsing Interlude Dots & Particle Bursts**: Live glowing countdown dots during instrumental gaps and confetti particle bursts on like.
 - **Wavy Music Slider**: Interactive animated waveform seek bar.
 - **Sliding Queue Drawer & Sleep Timer**: Intuitive gestures and time-based sleep scheduler.
 - **Desktop Widgets**: Aura (2x2), Waveform Bridge (4x2), and Full Music Dashboard (4x4).
@@ -67,6 +71,12 @@ MOONWAVE is built upon and incorporates code, design, and audio architecture fro
 - **Repository:** [https://github.com/MythicalSHUB/SpatialFlow](https://github.com/MythicalSHUB/SpatialFlow)
 - **License:** [Apache License 2.0](LICENSE)
 - Special thanks to Shubham Karande and CodeTrio for creating the beautiful UI, NewPipe streaming integration, multi-provider lyrics engine, audio normalizer, and music haptics that power MOONWAVE.
+
+### 🎭 Mochy Music (UI & Motion Physics)
+- **Creator:** **realidkroo** ([@realidkroo](https://github.com/realidkroo))
+- **Repository:** [https://github.com/realidkroo/Mochy-Music](https://github.com/realidkroo/Mochy-Music)
+- **License:** [GPL-3.0](https://github.com/realidkroo/Mochy-Music/blob/main/LICENSE)
+- Special thanks for the fluid 3D tactile press physics, squircle superellipse algorithms, cover reflection mesh, and lyrics interlude pulsing dots adapted into MOONWAVE.
 
 ### 📚 Libraries & Frameworks
 - **[AndroidX Media3 / ExoPlayer](https://github.com/androidx/media)**: Reliable background audio engine and session services.

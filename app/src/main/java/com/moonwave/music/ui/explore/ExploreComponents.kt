@@ -104,6 +104,8 @@ import com.moonwave.music.data.innertube.OnlinePlaylist
 import com.moonwave.music.data.innertube.OnlineSong
 import com.moonwave.music.data.innertube.SearchItem
 import com.moonwave.music.model.SongItem
+import com.moonwave.music.ui.component.SmoothCornerShape
+import com.moonwave.music.ui.component.press3D
 import com.moonwave.music.util.FavoritesManager
 import com.moonwave.music.util.SongDownloader
 import com.moonwave.music.viewmodel.ExploreViewModel
@@ -307,12 +309,13 @@ fun SearchResultItem(
         is SearchItem.Artist -> item.artist.browseId
         is SearchItem.Playlist -> item.playlist.playlistId
     }
-    val imageShape = if (isCircle) CircleShape else RoundedCornerShape(4.dp) // Match YT Music sharp rounded corner
+    val imageShape = if (isCircle) CircleShape else SmoothCornerShape(6.dp)
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 8.dp, vertical = 2.dp) // Perfect gap between items
+            .press3D(maxTilt = 3.5f, pressedScale = 0.985f)
             .clip(containerShape)
             .background(backgroundColor)
             .pointerInput(Unit) {
@@ -478,8 +481,11 @@ fun BentoCell(
     }
 
     Card(
-        modifier = modifier.clip(RoundedCornerShape(24.dp)).clickable(onClick = onClick),
-        shape = RoundedCornerShape(24.dp),
+        modifier = modifier
+            .press3D(maxTilt = 5f, pressedScale = 0.96f)
+            .clip(SmoothCornerShape(22.dp))
+            .clickable(onClick = onClick),
+        shape = SmoothCornerShape(22.dp),
         colors = CardDefaults.cardColors(containerColor = Color.Transparent),
         elevation = CardDefaults.cardElevation(0.dp)
     ) {
@@ -690,7 +696,8 @@ fun HomeSectionRow(
                                 }
                                 Box(
                                     modifier = Modifier.weight(1f).aspectRatio(1f)
-                                        .clip(RoundedCornerShape(12.dp))
+                                        .press3D(maxTilt = 6f, pressedScale = 0.94f)
+                                        .clip(SmoothCornerShape(14.dp))
                                         .clickable {
                                             when (item) {
                                                 is SearchItem.Song -> onSongClick(item.song)
@@ -1018,7 +1025,7 @@ fun HomeCarouselItem(
     modifier: Modifier = Modifier.width(160.dp)
 ) {
     val isCircle = item is SearchItem.Artist
-    val imageShape = if (isCircle) CircleShape else RoundedCornerShape(8.dp)
+    val imageShape = if (isCircle) CircleShape else SmoothCornerShape(14.dp)
     val itemId = when (item) {
         is SearchItem.Song -> item.song.videoId
         is SearchItem.Album -> item.album.browseId
@@ -1046,6 +1053,7 @@ fun HomeCarouselItem(
 
     Column(
         modifier = modifier
+            .press3D(maxTilt = 5f, pressedScale = 0.96f)
             .pointerInput(Unit) {
                 awaitPointerEventScope {
                     while (true) {
@@ -1127,6 +1135,7 @@ fun HomeSongListItem(
     Row(
         modifier = Modifier.fillMaxWidth()
             .background(MaterialTheme.colorScheme.background)
+            .press3D(maxTilt = 3.5f, pressedScale = 0.985f)
             .pointerInput(Unit) {
                 awaitPointerEventScope {
                     while (true) {
@@ -1148,7 +1157,7 @@ fun HomeSongListItem(
             AsyncImage(
                 model = ImageRequest.Builder(LocalContext.current).data(song.thumbnailUrl).crossfade(false).build(),
                 contentDescription = null,
-                modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(4.dp)),
+                modifier = Modifier.fillMaxSize().clip(SmoothCornerShape(8.dp)),
                 contentScale = ContentScale.Crop
             )
             if (isPlaying) {
