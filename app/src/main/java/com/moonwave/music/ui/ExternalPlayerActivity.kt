@@ -68,6 +68,7 @@ import coil.request.ImageRequest
 import com.moonwave.music.MainActivity
 import com.moonwave.music.service.AudioPlaybackService
 import com.moonwave.music.ui.player.WavyMusicSlider
+import com.moonwave.music.ui.theme.MoonwaveTheme
 import com.moonwave.music.ui.theme.SpatialFlowTheme
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
@@ -148,7 +149,7 @@ class ExternalPlayerActivity : ComponentActivity() {
         }
 
         setContent {
-            SpatialFlowTheme(darkTheme = true) { // Sleek immersive popup palette
+            MoonwaveTheme(darkTheme = true) { // Sleek immersive popup palette
                 Box(
                     modifier = Modifier
                         .fillMaxSize()

@@ -91,6 +91,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.moonwave.music.MainActivity
+import com.moonwave.music.ui.theme.MoonwaveTheme
 import com.moonwave.music.ui.theme.SpatialFlowTheme
 import com.moonwave.music.viewmodel.PlayerSharedViewModel
 import kotlinx.coroutines.delay
@@ -733,7 +734,7 @@ private fun SectionContainer(content: @Composable ColumnScope.() -> Unit) {
 @Preview(showBackground = true)
 @Composable
 fun EffectsScreenPreview() {
-    SpatialFlowTheme(darkTheme = true) {
+    MoonwaveTheme(darkTheme = true) {
         EffectsScreen(
             isProcessing = true, processingProgress = 45,
             is8DEnabled = true, on8DToggle = {},

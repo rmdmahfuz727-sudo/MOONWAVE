@@ -105,6 +105,7 @@ import com.bumptech.glide.Glide
 import com.moonwave.music.R
 import com.moonwave.music.model.SongItem
 import com.moonwave.music.ui.theme.GoogleSansFlex
+import com.moonwave.music.ui.theme.MoonwaveTheme
 import com.moonwave.music.ui.theme.SpatialFlowTheme
 import com.moonwave.music.viewmodel.PlayerSharedViewModel
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
@@ -159,7 +160,7 @@ class SongActionsBottomSheet : BottomSheetDialogFragment() {
         return ComposeView(requireContext()).apply {
             setViewCompositionStrategy(androidx.compose.ui.platform.ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
-                SpatialFlowTheme {
+                MoonwaveTheme {
                     BottomSheetScaffoldContent(
                         song = song,
                         actionListener = actionListener,
