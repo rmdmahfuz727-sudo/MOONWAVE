@@ -10,7 +10,7 @@
         </item>
 
         <item name="shapeAppearanceCornerLarge">
-            @style/ShapeAppearance.SpatialFlow.ExtraLarge
+            @style/ShapeAppearance.Moonwave.ExtraLarge
         </item>
 
         <item name="colorOutline">@color/md_theme_light_outline</item>
@@ -29,42 +29,42 @@
         <item name="android:enforceNavigationBarContrast" tools:targetApi="29">false</item>
 
         <item name="textAppearanceDisplayLarge">
-            @style/TextAppearance.SpatialFlow.DisplayLarge
+            @style/TextAppearance.Moonwave.DisplayLarge
         </item>
         <item name="textAppearanceDisplayMedium">
-            @style/TextAppearance.SpatialFlow.DisplayMedium
+            @style/TextAppearance.Moonwave.DisplayMedium
         </item>
         <item name="textAppearanceDisplaySmall">
-            @style/TextAppearance.SpatialFlow.DisplaySmall
+            @style/TextAppearance.Moonwave.DisplaySmall
         </item>
         <item name="textAppearanceHeadlineLarge">
-            @style/TextAppearance.SpatialFlow.HeadlineLarge
+            @style/TextAppearance.Moonwave.HeadlineLarge
         </item>
         <item name="textAppearanceHeadlineMedium">
-            @style/TextAppearance.SpatialFlow.HeadlineMedium
+            @style/TextAppearance.Moonwave.HeadlineMedium
         </item>
         <item name="textAppearanceHeadlineSmall">
-            @style/TextAppearance.SpatialFlow.HeadlineSmall
+            @style/TextAppearance.Moonwave.HeadlineSmall
         </item>
-        <item name="textAppearanceTitleLarge">@style/TextAppearance.SpatialFlow.TitleLarge
+        <item name="textAppearanceTitleLarge">@style/TextAppearance.Moonwave.TitleLarge
         </item>
         <item name="textAppearanceTitleMedium">
-            @style/TextAppearance.SpatialFlow.TitleMedium
+            @style/TextAppearance.Moonwave.TitleMedium
         </item>
-        <item name="textAppearanceTitleSmall">@style/TextAppearance.SpatialFlow.TitleSmall
+        <item name="textAppearanceTitleSmall">@style/TextAppearance.Moonwave.TitleSmall
         </item>
-        <item name="textAppearanceBodyLarge">@style/TextAppearance.SpatialFlow.BodyLarge
+        <item name="textAppearanceBodyLarge">@style/TextAppearance.Moonwave.BodyLarge
         </item>
-        <item name="textAppearanceBodyMedium">@style/TextAppearance.SpatialFlow.BodyMedium
+        <item name="textAppearanceBodyMedium">@style/TextAppearance.Moonwave.BodyMedium
         </item>
-        <item name="textAppearanceBodySmall">@style/TextAppearance.SpatialFlow.BodySmall
+        <item name="textAppearanceBodySmall">@style/TextAppearance.Moonwave.BodySmall
         </item>
-        <item name="textAppearanceLabelLarge">@style/TextAppearance.SpatialFlow.LabelLarge
+        <item name="textAppearanceLabelLarge">@style/TextAppearance.Moonwave.LabelLarge
         </item>
         <item name="textAppearanceLabelMedium">
-            @style/TextAppearance.SpatialFlow.LabelMedium
+            @style/TextAppearance.Moonwave.LabelMedium
         </item>
-        <item name="textAppearanceLabelSmall">@style/TextAppearance.SpatialFlow.LabelSmall
+        <item name="textAppearanceLabelSmall">@style/TextAppearance.Moonwave.LabelSmall
         </item>
 
         <!-- Material 3 color scheme -->
@@ -93,7 +93,7 @@
         <item name="materialButtonStyle">@style/Widget.Material3.Button</item>
 
         <!-- Custom MaterialSwitch style with checked icon -->
-        <item name="materialSwitchStyle">@style/Widget.SpatialFlow.Switch</item>
+        <item name="materialSwitchStyle">@style/Widget.Moonwave.Switch</item>
 
         <!-- Typography -->
 

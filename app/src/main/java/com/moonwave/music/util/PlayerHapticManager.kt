@@ -26,7 +26,7 @@ import kotlin.math.pow
 
 /**
  * PlayerHapticManager: Premium music haptics engine
- * Uses Android's native haptic constants for Apple Music-style feedback
+ * Uses Android's native haptic constants for MOONWAVE-style feedback
  */
 class PlayerHapticManager(context: Context) {
 

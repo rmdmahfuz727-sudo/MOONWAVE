@@ -54,7 +54,7 @@ import com.moonwave.music.R
  * Stacked overlapping angled artwork covers tucked into the bottom-right corner of a card.
  */
 @Composable
-fun MochyCoverStack(
+fun MoonwaveCoverStack(
     covers: List<String?>,
     modifier: Modifier = Modifier,
     tile: Dp = 46.dp,
@@ -122,10 +122,10 @@ fun MochyCoverStack(
 }
 
 /**
- * Mochy Category Card with bold count and tucked corner cover stack.
+ * Moonwave Category Card with bold count and tucked corner cover stack.
  */
 @Composable
-fun MochyLibraryCategoryCard(
+fun MoonwaveLibraryCategoryCard(
     title: String,
     count: Int,
     covers: List<String?>,
@@ -145,7 +145,7 @@ fun MochyLibraryCategoryCard(
             .clickable(onClick = onClick)
     ) {
         // Covers in bottom-right corner
-        MochyCoverStack(
+        MoonwaveCoverStack(
             covers = covers,
             round = roundCovers,
             tile = 46.dp,
@@ -180,10 +180,10 @@ fun MochyLibraryCategoryCard(
 }
 
 /**
- * Mochy Wide Card for "Recently added".
+ * Moonwave Wide Card for "Recently added".
  */
 @Composable
-fun MochyLibraryWideCard(
+fun MoonwaveLibraryWideCard(
     title: String,
     count: Int,
     covers: List<String?>,
@@ -203,7 +203,7 @@ fun MochyLibraryWideCard(
             .press3D(maxTilt = 3f, pressedScale = 0.98f)
             .clickable(onClick = onClick)
     ) {
-        MochyCoverStack(
+        MoonwaveCoverStack(
             covers = covers,
             tile = 58.dp,
             frontArt = frontArt,
@@ -237,10 +237,10 @@ fun MochyLibraryWideCard(
 }
 
 /**
- * Mochy "Import your music here!" card.
+ * Moonwave "Import your music here!" card.
  */
 @Composable
-fun MochyImportBanner(
+fun MoonwaveImportBanner(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -299,10 +299,10 @@ fun MochyImportBanner(
 }
 
 /**
- * Mochy Library Top Header with bold "Library" and avatar.
+ * Moonwave Library Top Header with bold "Library" and avatar.
  */
 @Composable
-fun MochyLibraryTopBar(
+fun MoonwaveLibraryTopBar(
     avatarUrl: String?,
     onAvatarClick: () -> Unit,
     onHistoryClick: () -> Unit,
@@ -363,10 +363,10 @@ fun MochyLibraryTopBar(
 }
 
 /**
- * Mochy "Search your library" search bar.
+ * Moonwave "Search your library" search bar.
  */
 @Composable
-fun MochyLibrarySearchBar(
+fun MoonwaveLibrarySearchBar(
     query: String,
     onQueryChange: (String) -> Unit,
     modifier: Modifier = Modifier
@@ -429,15 +429,15 @@ fun MochyLibrarySearchBar(
 }
 
 /**
- * Mochy Filter Chip Row: ["All", "Local & downloaded", "Cached", "Imported"].
+ * Moonwave Filter Chip Row: ["All", "Local", "Downloads", "Cached"].
  */
 @Composable
-fun MochyLibraryFilterChips(
+fun MoonwaveLibraryFilterChips(
     selectedTab: String,
     onTabSelected: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val tabs = listOf("All", "Local & downloaded", "Cached", "Imported")
+    val tabs = listOf("All", "Local", "Downloads", "Cached")
 
     Row(
         modifier = modifier

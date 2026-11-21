@@ -11,7 +11,7 @@ import java.util.Set;
  */
 public class FavoritesManager {
 
-    private static final String PREF_NAME = "spatialflow_favorites";
+    private static final String PREF_NAME = "moonwave_favorites";
     private static final String KEY_FAVORITES = "favorite_song_ids";
 
     private final SharedPreferences prefs;

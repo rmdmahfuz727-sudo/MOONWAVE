@@ -46,10 +46,10 @@ private data class Particle(
 )
 
 /**
- * Mochy Music style heart like button with 3D tactile press and particle burst animation.
+ * Moonwave Music style heart like button with 3D tactile press and particle burst animation.
  */
 @Composable
-fun MochyLikeButton(
+fun MoonwaveLikeButton(
     isLiked: Boolean,
     onToggle: () -> Unit,
     modifier: Modifier = Modifier,

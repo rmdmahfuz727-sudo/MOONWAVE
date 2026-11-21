@@ -104,6 +104,7 @@ import com.moonwave.music.data.innertube.OnlinePlaylist
 import com.moonwave.music.data.innertube.OnlineSong
 import com.moonwave.music.data.innertube.SearchItem
 import com.moonwave.music.model.SongItem
+import com.moonwave.music.ui.component.FrostedGlass
 import com.moonwave.music.ui.component.SmoothCornerShape
 import com.moonwave.music.ui.component.press3D
 import com.moonwave.music.util.FavoritesManager
@@ -237,7 +238,11 @@ fun HomeFeedSkeleton() {
  * Contextual welcome banner dynamically responding to internal application time states.
  */
 @Composable
-fun WelcomeGreetingBanner(userName: String?) {
+fun WelcomeGreetingBanner(
+    userName: String?,
+    artUrl: String? = null,
+    modifier: Modifier = Modifier
+) {
     val hour = remember { java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY) }
     val greeting = remember(hour) {
         when (hour) { in 0..11 -> "Good Morning"; in 12..16 -> "Good Afternoon"; else -> "Good Evening" }
@@ -251,32 +256,54 @@ fun WelcomeGreetingBanner(userName: String?) {
     }
     val name = if (!userName.isNullOrBlank()) userName else "Listener"
 
-    Column(
-        modifier = Modifier
+    FrostedGlass(
+        modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 24.dp, vertical = 20.dp)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        shape = SmoothCornerShape(24.dp),
+        tint = MaterialTheme.colorScheme.surface.copy(alpha = 0.46f),
+        blurRadius = 20.dp,
+        backdrop = if (artUrl != null) {
+            {
+                AsyncImage(
+                    model = ImageRequest.Builder(LocalContext.current)
+                        .data(artUrl)
+                        .crossfade(true)
+                        .build(),
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
+        } else null
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(
-                painter = painterResource(id = iconResId),
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(22.dp)
-            )
-            Spacer(modifier = Modifier.width(8.dp))
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 14.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    painter = painterResource(id = iconResId),
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(22.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = greeting,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = greeting,
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                text = name,
+                style = MaterialTheme.typography.headlineLarge.copy(letterSpacing = (-1).sp),
+                fontWeight = FontWeight.ExtraBold,
+                color = MaterialTheme.colorScheme.onSurface
             )
         }
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(
-            text = name,
-            style = MaterialTheme.typography.headlineLarge.copy(letterSpacing = (-1).sp),
-            fontWeight = FontWeight.ExtraBold,
-            color = MaterialTheme.colorScheme.onSurface
-        )
     }
 }
 // ===== Search Result Item =====

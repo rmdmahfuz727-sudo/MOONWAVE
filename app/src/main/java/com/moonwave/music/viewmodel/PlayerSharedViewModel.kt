@@ -59,7 +59,7 @@ import kotlin.math.abs
 import kotlin.time.Duration.Companion.milliseconds
 
 /**
- * Premium Kotlin-first ViewModel for SpatialFlow.
+ * Premium Kotlin-first ViewModel for Moonwave.
  * Migrated from legacy Java/LiveData architecture to StateFlow + Coroutines.
  * Optimized for Material 3 Expressive and Media3 integration.
  */
@@ -330,6 +330,7 @@ class PlayerSharedViewModel @Inject constructor(
         _isPlaying.value = oldVm._isPlaying.value
         _currentPosition.value = oldVm._currentPosition.value
         _duration.value = oldVm._duration.value
+        _currentAudioCodec.value = oldVm._currentAudioCodec.value
         _isShuffleEnabled.value = oldVm._isShuffleEnabled.value
         _repeatMode.value = oldVm._repeatMode.value
         _isPlayerExpanded.value = oldVm._isPlayerExpanded.value
@@ -396,6 +397,15 @@ class PlayerSharedViewModel @Inject constructor(
 
     private val _playerBackgroundColor = MutableStateFlow(0xFF0F0F0F.toInt())
     val playerBackgroundColor: StateFlow<Int> = _playerBackgroundColor.asStateFlow()
+
+    // Codec label reported by the playback engine for the current source.
+    private val _currentAudioCodec = MutableStateFlow("AAC")
+    val currentAudioCodec: StateFlow<String> = _currentAudioCodec.asStateFlow()
+
+    fun postAudioCodec(codec: String) {
+        val label = codec.trim().ifBlank { "AAC" }
+        if (_currentAudioCodec.value != label) _currentAudioCodec.value = label
+    }
 
     private val _currentSongIndex = MutableStateFlow(-1)
     val currentSongIndex: StateFlow<Int> = _currentSongIndex.asStateFlow()

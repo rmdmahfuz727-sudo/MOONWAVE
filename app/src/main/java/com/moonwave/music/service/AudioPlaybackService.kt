@@ -92,6 +92,7 @@ class AudioPlaybackService : MediaSessionService() {
         const val ACTION_TOGGLE_FAV = "com.moonwave.music.ACTION_TOGGLE_FAV"
 
         private const val PREFS_NAME = "AppSettings"
+        private const val KEY_CROSSFADE_ENABLED = "crossfade_enabled"
         private const val KEY_CROSSFADE_DURATION = "crossfade_duration"
         private const val KEY_AUDIO_FOCUS = "audio_focus"
 
@@ -126,7 +127,7 @@ class AudioPlaybackService : MediaSessionService() {
     private var originalSourceUri: Uri? = null
     private var isProcessing = false
     private var isNextSongPreCached = false
-    private var currentSongName = "SpatialFlow"
+    private var currentSongName = "Moonwave"
     private var currentAlbumArt: Bitmap? = null
     private var is8DEnabled = false
     private var hasProcessed8D = false
@@ -165,6 +166,7 @@ class AudioPlaybackService : MediaSessionService() {
     private var prefListener: SharedPreferences.OnSharedPreferenceChangeListener? = null
 
     private var crossfadeAnimator: android.animation.ValueAnimator? = null
+    private var softFadeAnimator: android.animation.ValueAnimator? = null
 
     private val mainPlayerListener = object : Player.Listener {
         override fun onIsPlayingChanged(isPlaying: Boolean) {
@@ -296,6 +298,32 @@ class AudioPlaybackService : MediaSessionService() {
         }
     }
 
+    // Reports the real audio format ExoPlayer selected so the player can show an accurate badge
+    // instead of a hard-coded "AAC" label.
+    private val codecAnalyticsListener = object : androidx.media3.exoplayer.analytics.AnalyticsListener {
+        override fun onAudioInputFormatChanged(
+            eventTime: androidx.media3.exoplayer.analytics.AnalyticsListener.EventTime,
+            format: androidx.media3.common.Format,
+            decoderReuseEvaluation: androidx.media3.exoplayer.DecoderReuseEvaluation?
+        ) {
+            viewModel?.postAudioCodec(format.toDisplayCodec())
+        }
+    }
+
+    private fun androidx.media3.common.Format.toDisplayCodec(): String {
+        val raw = (codecs ?: sampleMimeType ?: "AAC").lowercase(java.util.Locale.ROOT)
+        return when {
+            raw.contains("mp4a") || raw.contains("aac") -> "AAC"
+            raw.contains("flac") -> "FLAC"
+            raw.contains("opus") -> "OPUS"
+            raw.contains("ogg") -> "OGG"
+            raw.contains("mp3") || raw.contains("mpeg") -> "MP3"
+            raw.contains("wav") -> "WAV"
+            raw.contains("alac") -> "ALAC"
+            else -> raw.substringAfter('.', raw).take(6).uppercase(java.util.Locale.ROOT)
+        }
+    }
+
     private val audioFocusChangeListener = AudioManager.OnAudioFocusChangeListener { focusChange ->
         when (focusChange) {
             AudioManager.AUDIOFOCUS_GAIN -> {
@@ -387,6 +415,8 @@ class AudioPlaybackService : MediaSessionService() {
             getSharedPreferences(PREFS_NAME, MODE_PRIVATE).unregisterOnSharedPreferenceChangeListener(it)
         }
         handler.removeCallbacks(progressUpdateRunnable)
+        softFadeAnimator?.cancel()
+        crossfadeAnimator?.cancel()
         releaseAudioEffects()
         abandonAudioFocus()
         
@@ -410,6 +440,7 @@ class AudioPlaybackService : MediaSessionService() {
         player.setWakeMode(C.WAKE_MODE_NETWORK) 
         player.skipSilenceEnabled = false
         player.addListener(mainPlayerListener)
+        player.addAnalyticsListener(codecAnalyticsListener)
     }
 
     private fun buildExoPlayer(processor: StereoBalanceProcessor): ExoPlayer {
@@ -759,6 +790,7 @@ class AudioPlaybackService : MediaSessionService() {
     }
 
     fun pause() {
+        softFadeAnimator?.cancel()
         if (player.isPlaying) {
             player.pause()
             if (isCrossfading) {
@@ -776,6 +808,7 @@ class AudioPlaybackService : MediaSessionService() {
     }
 
     fun stop() {
+        softFadeAnimator?.cancel()
         player.stop()
         if (isCrossfading) {
             nextPlayer?.stop()
@@ -820,7 +853,7 @@ class AudioPlaybackService : MediaSessionService() {
     }
 
     fun setSongMetadata(songName: String?, albumArt: Bitmap?) {
-        this.currentSongName = songName ?: "SpatialFlow"
+        this.currentSongName = songName ?: "Moonwave"
         this.currentAlbumArt = albumArt?.let { 
             val size = min(it.width, it.height)
             Bitmap.createBitmap(it, (it.width - size) / 2, (it.height - size) / 2, size, size).scale(512, 512, true)
@@ -1134,6 +1167,7 @@ class AudioPlaybackService : MediaSessionService() {
     }
 
     private fun loadAudioInternal(uri: Uri, keepPlayingUntilReady: Boolean = false) {
+        val wasPlaying = player.isPlaying
         if (!keepPlayingUntilReady) {
             player.pause()
             player.stop()
@@ -1192,6 +1226,12 @@ class AudioPlaybackService : MediaSessionService() {
             
             if (shouldAutoPlay) {
                 if (requestAudioFocus()) {
+                    // Manual skips do not use the crossfade path. Ramp the incoming track up
+                    // briefly so song changes never cut in abruptly.
+                    if (wasPlaying && !isCrossfading && crossfadeDurationMs == 0) {
+                        player.volume = 0f
+                        fadeInToBaseVolume()
+                    }
                     player.play()
                     isPausedByFocusLoss = false
                 }
@@ -1597,6 +1637,31 @@ class AudioPlaybackService : MediaSessionService() {
         }
     }
 
+    /** Gentle volume ramp for manual song changes when crossfade is not driving the handoff. */
+    private fun fadeInToBaseVolume() {
+        softFadeAnimator?.cancel()
+        val target = currentBaseVolume
+        softFadeAnimator = android.animation.ValueAnimator.ofFloat(0f, target).apply {
+            duration = 340L
+            interpolator = android.view.animation.DecelerateInterpolator()
+            addUpdateListener { animation ->
+                if (!isCrossfading) player.volume = animation.animatedValue as Float
+            }
+            addListener(object : android.animation.AnimatorListenerAdapter() {
+                override fun onAnimationEnd(animation: android.animation.Animator) {
+                    if (!isCrossfading) player.volume = currentBaseVolume
+                    softFadeAnimator = null
+                }
+
+                override fun onAnimationCancel(animation: android.animation.Animator) {
+                    if (!isCrossfading) player.volume = currentBaseVolume
+                    softFadeAnimator = null
+                }
+            })
+            start()
+        }
+    }
+
     private fun startCrossfadeOut() {
         if (isCrossfading || nextPlayer == null) return
         isCrossfading = true
@@ -1690,13 +1755,17 @@ class AudioPlaybackService : MediaSessionService() {
 
     private fun loadAudioPreferences() {
         val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-        crossfadeDurationMs = (prefs.getFloat(KEY_CROSSFADE_DURATION, 0f) * 1000).toInt()
+        val crossfadeEnabled = prefs.getBoolean(KEY_CROSSFADE_ENABLED, true)
+        val durationSeconds = prefs.getFloat(KEY_CROSSFADE_DURATION, 3f)
+        // The enabled flag must be honoured: previously a stale duration kept crossfading even
+        // when the setting was off, and enabling crossfade without moving the slider did nothing.
+        crossfadeDurationMs = if (crossfadeEnabled) (durationSeconds * 1000).toInt() else 0
         audioFocusEnabled = prefs.getBoolean(KEY_AUDIO_FOCUS, true)
     }
 
     private fun setupPreferenceListener() {
         prefListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
-            if (KEY_CROSSFADE_DURATION == key || KEY_AUDIO_FOCUS == key) loadAudioPreferences()
+            if (KEY_CROSSFADE_ENABLED == key || KEY_CROSSFADE_DURATION == key || KEY_AUDIO_FOCUS == key) loadAudioPreferences()
             if (com.moonwave.music.ui.SettingsViewModel.KEY_VOLUME_NORMALIZATION_ENABLED == key || 
                 com.moonwave.music.ui.SettingsViewModel.KEY_TARGET_LUFS == key) {
                 updateBaseVolume()
@@ -1877,7 +1946,7 @@ class AudioPlaybackService : MediaSessionService() {
             notificationBuilder.setSmallIcon(R.drawable.ic_music_note)
             notificationBuilder.setContentTitle(currentSongName)
             notificationBuilder.setContentText(if (is8DEnabled) "🎧 8D Audio" else "Normal Playback")
-            notificationBuilder.setSubText("SpatialFlow")
+            notificationBuilder.setSubText("Moonwave")
             notificationBuilder.setChannelId("audio_playback_channel")
             notificationBuilder.setOngoing(isPlaying)
             notificationBuilder.setPriority(androidx.core.app.NotificationCompat.PRIORITY_HIGH)

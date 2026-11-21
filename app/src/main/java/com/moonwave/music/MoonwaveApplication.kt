@@ -97,9 +97,9 @@ class MoonwaveApplication : Application(), ImageLoaderFactory {
                         .head()
                         .build()
                 ).execute().close()
-                Log.d("SpatialFlowApp", "Successfully warmed OkHttp connection to YouTube CDN")
+                Log.d("MoonwaveApp", "Successfully warmed OkHttp connection to YouTube CDN")
             } catch (e: Exception) {
-                Log.w("SpatialFlowApp", "Failed to warm up OkHttp connection: ${e.message}")
+                Log.w("MoonwaveApp", "Failed to warm up OkHttp connection: ${e.message}")
             }
 
             try {
@@ -108,9 +108,9 @@ class MoonwaveApplication : Application(), ImageLoaderFactory {
                 // A lightweight dummy request to trigger JS evaluation
                 // This is a known lightweight video ID just for warming the engine
                 NewPipeStreamExtractor.getStreamUrl("dQw4w9WgXcQ")
-                Log.d("SpatialFlowApp", "Successfully JIT-warmed NewPipe JS Extractor engine")
+                Log.d("MoonwaveApp", "Successfully JIT-warmed NewPipe JS Extractor engine")
             } catch (e: Exception) {
-                Log.w("SpatialFlowApp", "Failed to warm up NewPipe Extractor: ${e.message}")
+                Log.w("MoonwaveApp", "Failed to warm up NewPipe Extractor: ${e.message}")
             }
         }
 

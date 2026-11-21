@@ -19,7 +19,7 @@ abstract class MusicDatabase : RoomDatabase() {
                 val instance = Room.databaseBuilder(
                     context.applicationContext,
                     MusicDatabase::class.java,
-                    "spatialflow_music_database"
+                    "moonwave_music_database"
                 )
                 .addMigrations(MIGRATION_2_3)
                 .fallbackToDestructiveMigration(false)

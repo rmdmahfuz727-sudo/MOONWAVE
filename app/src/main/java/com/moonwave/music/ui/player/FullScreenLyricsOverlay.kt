@@ -135,6 +135,7 @@ internal fun FullScreenLyricsOverlay(
     currentPositionProvider: () -> Int,
     contentReady: Boolean,
     backgroundBrush: Brush,
+    filmGrain: Boolean = false,
     revealProgressProvider: () -> Float,
     revealCenterProvider: () -> Offset?,
     contentColor: Color,
@@ -175,6 +176,13 @@ internal fun FullScreenLyricsOverlay(
             .navigationBarsPadding()
             .padding(vertical = 12.dp)
     ) {
+        if (filmGrain) {
+            FilmGrainOverlay(
+                modifier = Modifier.matchParentSize(),
+                tint = contentColor,
+                strength = 0.06f
+            )
+        }
         Column(modifier = Modifier.fillMaxSize()) {
             // Centered Title Header Layout
             Row(

@@ -22,7 +22,7 @@ import androidx.compose.ui.unit.dp
 import kotlin.math.sin
 
 /**
- * Mochy Music style musical interlude countdown dots.
+ * Moonwave Music style musical interlude countdown dots.
  * Displays 3 rhythmic pulsing glowing dots during instrumental breaks between lyric lines.
  */
 @Composable

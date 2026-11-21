@@ -23,12 +23,12 @@ import com.moonwave.music.model.SongItem;
 import java.util.Objects;
 
 /**
- * Base Widget Provider for SpatialFlow.
+ * Base Widget Provider for Moonwave.
  * Handles common playback control intents and updates all 3 widget sizes.
  */
 public class MoonwaveWidgetProvider extends AppWidgetProvider {
 
-    private static final String TAG = "SpatialFlowWidget";
+    private static final String TAG = "MoonwaveWidget";
 
     // Intent Actions from AudioPlaybackService (must match exactly)
     private static final String ACTION_PLAY = "com.moonwave.music.ACTION_PLAY";
@@ -37,7 +37,7 @@ public class MoonwaveWidgetProvider extends AppWidgetProvider {
     private static final String ACTION_NEXT = "com.moonwave.music.ACTION_NEXT";
     private static final String ACTION_TOGGLE_LYRICS = "com.moonwave.music.ACTION_TOGGLE_LYRICS";
     
-    private static final String PREFS_NAME = "spatialflow_widget_prefs";
+    private static final String PREFS_NAME = "moonwave_widget_prefs";
     private static final String PREF_LYRICS_MODE = "lyrics_mode_";
 
     @Override
@@ -173,7 +173,7 @@ public class MoonwaveWidgetProvider extends AppWidgetProvider {
                 }
             } else {
                 if (layoutId == R.layout.widget_medium || layoutId == R.layout.widget_large) {
-                    views.setTextViewText(R.id.widget_song_title, "SpatialFlow");
+                    views.setTextViewText(R.id.widget_song_title, "Moonwave");
                     views.setTextViewText(R.id.widget_artist_name, "Select a song");
                 }
                 if (layoutId == R.layout.widget_medium || layoutId == R.layout.widget_large) {

@@ -2,8 +2,11 @@ package com.moonwave.music.ui.player
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -16,6 +19,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.graphics.BlendMode
@@ -34,7 +39,9 @@ import androidx.compose.ui.unit.sp
 import com.moonwave.music.R
 import com.moonwave.music.data.lyrics.LyricsResult
 import com.moonwave.music.model.SongItem
+import com.moonwave.music.ui.component.AppearancePrefs
 import com.moonwave.music.ui.component.press3D
+import com.moonwave.music.ui.theme.observeKey
 
 /**
  * Custom Compose extension to render a marquee with smooth horizontal alpha-faded edges.
@@ -241,8 +248,16 @@ internal fun WavySliderWithLabels(
     contentColor: Color,
     contentSecondary: Color,
     isDark: Boolean,
+    audioCodec: String = "AAC",
     modifier: Modifier = Modifier
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val prefs = remember(context) {
+        context.getSharedPreferences(AppearancePrefs.PREFS, android.content.Context.MODE_PRIVATE)
+    }
+    val style by prefs.observeKey(AppearancePrefs.SEEK_BAR_STYLE, AppearancePrefs.SEEK_EXPRESSIVE)
+    val showAudioCodec by prefs.observeKey(AppearancePrefs.SHOW_AUDIO_CODEC, true)
+
     var isScrubbing by remember { mutableStateOf(false) }
     var sliderScrubPos by remember { mutableFloatStateOf(0f) }
 
@@ -250,48 +265,188 @@ internal fun WavySliderWithLabels(
     val safeDur = if (duration > 0) duration.toFloat() else 1f
     val displayPos = if (isScrubbing) (sliderScrubPos * safeDur).toInt() else currentPosition
     val progressRatio = (currentPosition.toFloat() / safeDur).coerceIn(0f, 1f)
+    val inactiveColor = contentColor.copy(alpha = if (isDark) 0.12f else 0.10f)
+
+    val onScrub: (Float) -> Unit = {
+        isScrubbing = true
+        sliderScrubPos = it
+    }
+    val onScrubFinished: () -> Unit = {
+        isScrubbing = false
+        onSeekTo((sliderScrubPos * safeDur).toInt())
+    }
 
     Column(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 8.dp)
     ) {
-        WavyMusicSlider(
-            value = if (isScrubbing) sliderScrubPos else progressRatio,
-            onValueChange = {
-                isScrubbing = true
-                sliderScrubPos = it
-            },
-            onValueChangeFinished = {
-                isScrubbing = false
-                onSeekTo((sliderScrubPos * safeDur).toInt())
-            },
-            activeTrackColor = dynamicAccentColor,
-            inactiveTrackColor = contentColor.copy(alpha = if (isDark) 0.08f else 0.06f),
-            thumbColor = contentColor,
-            isPlaying = isPlaying,
-            trackHeight = 4.dp,
-            thumbRadius = 6.dp,
-            waveAmplitudeWhenPlaying = 6.dp,
-            waveLength = 48.dp,
-        )
+        val sliderValue = if (isScrubbing) sliderScrubPos else progressRatio
+        when (style) {
+            AppearancePrefs.SEEK_CAPSULE -> {
+                CapsuleMusicSlider(
+                    value = sliderValue,
+                    onValueChange = onScrub,
+                    onValueChangeFinished = onScrubFinished,
+                    activeColor = dynamicAccentColor,
+                    inactiveColor = inactiveColor,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+            AppearancePrefs.SEEK_CLASSIC -> {
+                WavyMusicSlider(
+                    value = sliderValue,
+                    onValueChange = onScrub,
+                    onValueChangeFinished = onScrubFinished,
+                    activeTrackColor = dynamicAccentColor,
+                    inactiveTrackColor = inactiveColor,
+                    thumbColor = contentColor,
+                    isPlaying = isPlaying,
+                    isWaveEligible = false,
+                    trackHeight = 3.dp,
+                    thumbRadius = 7.dp,
+                    hideInactiveTrackPortion = false,
+                    waveAmplitudeWhenPlaying = 0.dp
+                )
+            }
+            AppearancePrefs.SEEK_WAVY -> {
+                WavyMusicSlider(
+                    value = sliderValue,
+                    onValueChange = onScrub,
+                    onValueChangeFinished = onScrubFinished,
+                    activeTrackColor = dynamicAccentColor,
+                    inactiveTrackColor = inactiveColor,
+                    thumbColor = contentColor,
+                    isPlaying = isPlaying,
+                    trackHeight = 4.dp,
+                    thumbRadius = 6.dp,
+                    waveAmplitudeWhenPlaying = 6.dp,
+                    waveLength = 48.dp
+                )
+            }
+            else -> {
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    WavyMusicSlider(
+                        value = sliderValue,
+                        onValueChange = onScrub,
+                        onValueChangeFinished = onScrubFinished,
+                        activeTrackColor = dynamicAccentColor,
+                        inactiveTrackColor = inactiveColor,
+                        thumbColor = Color.White,
+                        isPlaying = isPlaying,
+                        trackHeight = 5.dp,
+                        thumbRadius = 8.dp,
+                        waveAmplitudeWhenPlaying = 10.dp,
+                        waveLength = 64.dp
+                    )
+                }
+            }
+        }
 
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 4.dp),
-            horizontalArrangement = Arrangement.SpaceBetween
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
                 text = formatDuration(displayPos.toLong()),
                 style = MaterialTheme.typography.labelSmall,
                 color = contentSecondary
             )
+            // Stream codec badge shown in the centre of the transport. The label comes from
+            // ExoPlayer's selected audio format and can be hidden in Appearance settings.
+            if (showAudioCodec) {
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(contentColor.copy(alpha = if (isDark) 0.10f else 0.07f))
+                        .padding(horizontal = 8.dp, vertical = 2.dp)
+                ) {
+                    Text(
+                        text = audioCodec,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = contentSecondary
+                    )
+                }
+            }
             Text(
                 text = formatDuration(duration.toLong()),
                 style = MaterialTheme.typography.labelSmall,
                 color = contentSecondary
             )
+        }
+    }
+}
+
+/**
+ * MOONWAVE capsule scrubber: a rounded capsule that thickens while the user drags.
+ */
+@Composable
+internal fun CapsuleMusicSlider(
+    value: Float,
+    onValueChange: (Float) -> Unit,
+    onValueChangeFinished: () -> Unit,
+    activeColor: Color,
+    inactiveColor: Color,
+    modifier: Modifier = Modifier
+) {
+    var isInteracting by remember { mutableStateOf(false) }
+    val trackHeight by androidx.compose.animation.core.animateDpAsState(
+        targetValue = if (isInteracting) 20.dp else 11.dp,
+        animationSpec = spring(dampingRatio = 0.7f, stiffness = 600f),
+        label = "CapsuleHeight"
+    )
+
+    Box(
+        modifier = modifier
+            .height(44.dp)
+            .pointerInput(Unit) {
+                detectTapGestures { offset ->
+                    val fraction = (offset.x / size.width.toFloat()).coerceIn(0f, 1f)
+                    onValueChange(fraction)
+                    onValueChangeFinished()
+                }
+            }
+            .pointerInput(Unit) {
+                detectHorizontalDragGestures(
+                    onDragStart = { isInteracting = true },
+                    onDragEnd = {
+                        isInteracting = false
+                        onValueChangeFinished()
+                    },
+                    onDragCancel = {
+                        isInteracting = false
+                        onValueChangeFinished()
+                    },
+                    onHorizontalDrag = { change, _ ->
+                        val fraction = (change.position.x / size.width.toFloat()).coerceIn(0f, 1f)
+                        onValueChange(fraction)
+                    }
+                )
+            },
+        contentAlignment = Alignment.CenterStart
+    ) {
+        Canvas(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(trackHeight)
+        ) {
+            val radius = size.height / 2f
+            drawRoundRect(
+                color = inactiveColor,
+                cornerRadius = androidx.compose.ui.geometry.CornerRadius(radius, radius)
+            )
+            val activeWidth = (size.width * value.coerceIn(0f, 1f)).coerceAtLeast(if (value > 0f) size.height else 0f)
+            if (activeWidth > 0f) {
+                drawRoundRect(
+                    color = activeColor,
+                    size = androidx.compose.ui.geometry.Size(activeWidth, size.height),
+                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(radius, radius)
+                )
+            }
         }
     }
 }
@@ -349,6 +504,32 @@ internal fun LyricsMetadataFooter(
                 text = "Lyrics by $selectedProvider",
                 style = metaStyle,
                 maxLines = 1
+            )
+        }
+    }
+}
+
+/**
+ * Static analog-style film grain. The points are deterministic so the texture never flickers
+ * between recompositions; it is only meant to break up gradient banding on large surfaces.
+ */
+@Composable
+internal fun FilmGrainOverlay(
+    modifier: Modifier = Modifier,
+    tint: Color = Color.White,
+    strength: Float = 0.075f
+) {
+    Canvas(modifier = modifier) {
+        val random = kotlin.random.Random(20261121)
+        val count = ((size.width * size.height) / 1400f).toInt().coerceIn(400, 2600)
+        repeat(count) {
+            drawCircle(
+                color = tint.copy(alpha = strength * random.nextFloat()),
+                radius = 0.4f + random.nextFloat() * 1.3f,
+                center = Offset(
+                    x = random.nextFloat() * size.width,
+                    y = random.nextFloat() * size.height
+                )
             )
         }
     }

@@ -29,7 +29,7 @@ import java.net.URL
 
 object SongDownloader {
     private const val TAG = "SongDownloader"
-    private const val CHANNEL_ID = "spatialflow_downloads"
+    private const val CHANNEL_ID = "moonwave_downloads"
     private val scope = CoroutineScope(Dispatchers.IO)
 
     private val _downloadProgress = MutableStateFlow<Map<String, Int>>(emptyMap())
@@ -280,7 +280,7 @@ object SongDownloader {
 
         // 1. Check legacy direct file path if pre-Q
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
-            val downloadsDir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "SpatialFlow")
+            val downloadsDir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "Moonwave")
             val file = File(downloadsDir, cleanName)
             if (file.exists()) return true
         }

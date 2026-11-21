@@ -27,7 +27,7 @@ public class CacheManager {
 
     // Directories to clean
     private static final String[] CACHE_SUBDIRS = {
-            "SpatialFlow_output" // FFmpeg output directory
+            "Moonwave_output" // FFmpeg output directory
     };
 
     /**

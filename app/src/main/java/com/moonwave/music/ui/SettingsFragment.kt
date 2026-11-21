@@ -141,6 +141,7 @@ import androidx.navigation.compose.rememberNavController
 import com.moonwave.music.BuildConfig
 import com.moonwave.music.MainActivity
 import com.moonwave.music.R
+import com.moonwave.music.ui.component.AppearancePrefs
 import com.moonwave.music.ui.player.SleepTimerBottomSheet
 import com.moonwave.music.viewmodel.PlayerSharedViewModel
 import kotlinx.coroutines.Dispatchers
@@ -156,6 +157,7 @@ import java.net.URLEncoder
 import java.text.DecimalFormat
 import kotlin.math.log10
 import kotlin.math.pow
+import kotlin.math.roundToInt
 
 private val SmoothSpring = spring<Float>(
     dampingRatio = Spring.DampingRatioNoBouncy,
@@ -230,7 +232,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 
     // ── Crossfade ────────────────────────────────────────────────────────────
     private val _crossfadeEnabled =
-        MutableStateFlow(prefs.getBoolean(KEY_CROSSFADE_ENABLED, false))
+        MutableStateFlow(prefs.getBoolean(KEY_CROSSFADE_ENABLED, true))
     val crossfadeEnabled: StateFlow<Boolean> = _crossfadeEnabled.asStateFlow()
 
     private val _crossfadeDuration =
@@ -298,6 +300,137 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     fun setDynamicNavStyle(enabled: Boolean) {
         _dynamicNavStyle.value = enabled
         prefs.edit {putBoolean("dynamic_nav_style", enabled)}
+    }
+
+    // ── Appearance / Motion ────────────────────────────────────────────────
+    private val _albumArtTransition = MutableStateFlow(
+        prefs.getString(com.moonwave.music.ui.component.AppearancePrefs.ALBUM_ART_TRANSITION, "shuffle") ?: "shuffle"
+    )
+    val albumArtTransition: StateFlow<String> = _albumArtTransition.asStateFlow()
+
+    fun setAlbumArtTransition(value: String) {
+        _albumArtTransition.value = value
+        prefs.edit { putString(com.moonwave.music.ui.component.AppearancePrefs.ALBUM_ART_TRANSITION, value) }
+    }
+
+    private val _lyricsFilmGrain = MutableStateFlow(
+        prefs.getBoolean(com.moonwave.music.ui.component.AppearancePrefs.LYRICS_FILM_GRAIN, true)
+    )
+    val lyricsFilmGrain: StateFlow<Boolean> = _lyricsFilmGrain.asStateFlow()
+
+    fun setLyricsFilmGrain(enabled: Boolean) {
+        _lyricsFilmGrain.value = enabled
+        prefs.edit { putBoolean(com.moonwave.music.ui.component.AppearancePrefs.LYRICS_FILM_GRAIN, enabled) }
+    }
+
+    private val _navigationStyle = MutableStateFlow(
+        prefs.getString(com.moonwave.music.ui.component.AppearancePrefs.NAVIGATION_STYLE, "floating") ?: "floating"
+    )
+    val navigationStyle: StateFlow<String> = _navigationStyle.asStateFlow()
+
+    fun setNavigationStyle(value: String) {
+        _navigationStyle.value = value
+        prefs.edit { putString(com.moonwave.music.ui.component.AppearancePrefs.NAVIGATION_STYLE, value) }
+    }
+
+    private val _slideNavOnScroll = MutableStateFlow(
+        prefs.getBoolean(com.moonwave.music.ui.component.AppearancePrefs.SLIDE_NAV_ON_SCROLL, true)
+    )
+    val slideNavOnScroll: StateFlow<Boolean> = _slideNavOnScroll.asStateFlow()
+
+    fun setSlideNavOnScroll(enabled: Boolean) {
+        _slideNavOnScroll.value = enabled
+        prefs.edit { putBoolean(com.moonwave.music.ui.component.AppearancePrefs.SLIDE_NAV_ON_SCROLL, enabled) }
+    }
+
+    private val _forceHighRefreshRate = MutableStateFlow(
+        prefs.getBoolean(com.moonwave.music.ui.component.AppearancePrefs.FORCE_HIGH_REFRESH_RATE, true)
+    )
+    val forceHighRefreshRate: StateFlow<Boolean> = _forceHighRefreshRate.asStateFlow()
+
+    fun setForceHighRefreshRate(enabled: Boolean) {
+        _forceHighRefreshRate.value = enabled
+        prefs.edit { putBoolean(com.moonwave.music.ui.component.AppearancePrefs.FORCE_HIGH_REFRESH_RATE, enabled) }
+    }
+
+    private val _frostedGlass = MutableStateFlow(
+        prefs.getBoolean(com.moonwave.music.ui.component.AppearancePrefs.FROSTED_GLASS, true)
+    )
+    val frostedGlass: StateFlow<Boolean> = _frostedGlass.asStateFlow()
+
+    fun setFrostedGlass(enabled: Boolean) {
+        _frostedGlass.value = enabled
+        prefs.edit { putBoolean(com.moonwave.music.ui.component.AppearancePrefs.FROSTED_GLASS, enabled) }
+    }
+
+    private val _solidStateSurfaces = MutableStateFlow(
+        prefs.getBoolean(com.moonwave.music.ui.component.AppearancePrefs.SOLID_STATE_SURFACES, false)
+    )
+    val solidStateSurfaces: StateFlow<Boolean> = _solidStateSurfaces.asStateFlow()
+
+    fun setSolidStateSurfaces(enabled: Boolean) {
+        _solidStateSurfaces.value = enabled
+        prefs.edit { putBoolean(com.moonwave.music.ui.component.AppearancePrefs.SOLID_STATE_SURFACES, enabled) }
+    }
+
+    private val _tabSwitchingBlur = MutableStateFlow(
+        prefs.getBoolean(com.moonwave.music.ui.component.AppearancePrefs.TAB_SWITCHING_BLUR, false)
+    )
+    val tabSwitchingBlur: StateFlow<Boolean> = _tabSwitchingBlur.asStateFlow()
+
+    fun setTabSwitchingBlur(enabled: Boolean) {
+        _tabSwitchingBlur.value = enabled
+        prefs.edit { putBoolean(com.moonwave.music.ui.component.AppearancePrefs.TAB_SWITCHING_BLUR, enabled) }
+    }
+
+    private val _playerTheme = MutableStateFlow(
+        prefs.getString(com.moonwave.music.ui.component.AppearancePrefs.PLAYER_THEME, "fluid") ?: "fluid"
+    )
+    val playerTheme: StateFlow<String> = _playerTheme.asStateFlow()
+
+    fun setPlayerTheme(value: String) {
+        _playerTheme.value = value
+        prefs.edit { putString(com.moonwave.music.ui.component.AppearancePrefs.PLAYER_THEME, value) }
+    }
+
+    private val _seekBarStyle = MutableStateFlow(
+        prefs.getString(com.moonwave.music.ui.component.AppearancePrefs.SEEK_BAR_STYLE, "expressive") ?: "expressive"
+    )
+    val seekBarStyle: StateFlow<String> = _seekBarStyle.asStateFlow()
+
+    fun setSeekBarStyle(value: String) {
+        _seekBarStyle.value = value
+        prefs.edit { putString(com.moonwave.music.ui.component.AppearancePrefs.SEEK_BAR_STYLE, value) }
+    }
+
+    private val _animatedAlbumArt = MutableStateFlow(
+        prefs.getBoolean(com.moonwave.music.ui.component.AppearancePrefs.ANIMATED_ALBUM_ART, true)
+    )
+    val animatedAlbumArt: StateFlow<Boolean> = _animatedAlbumArt.asStateFlow()
+
+    fun setAnimatedAlbumArt(enabled: Boolean) {
+        _animatedAlbumArt.value = enabled
+        prefs.edit { putBoolean(com.moonwave.music.ui.component.AppearancePrefs.ANIMATED_ALBUM_ART, enabled) }
+    }
+
+    private val _playerGradientBlur = MutableStateFlow(
+        prefs.getBoolean(com.moonwave.music.ui.component.AppearancePrefs.PLAYER_GRADIENT_BLUR, true)
+    )
+    val playerGradientBlur: StateFlow<Boolean> = _playerGradientBlur.asStateFlow()
+
+    fun setPlayerGradientBlur(enabled: Boolean) {
+        _playerGradientBlur.value = enabled
+        prefs.edit { putBoolean(com.moonwave.music.ui.component.AppearancePrefs.PLAYER_GRADIENT_BLUR, enabled) }
+    }
+
+    private val _showAudioCodec = MutableStateFlow(
+        prefs.getBoolean(com.moonwave.music.ui.component.AppearancePrefs.SHOW_AUDIO_CODEC, true)
+    )
+    val showAudioCodec: StateFlow<Boolean> = _showAudioCodec.asStateFlow()
+
+    fun setShowAudioCodec(enabled: Boolean) {
+        _showAudioCodec.value = enabled
+        prefs.edit { putBoolean(com.moonwave.music.ui.component.AppearancePrefs.SHOW_AUDIO_CODEC, enabled) }
     }
 
     // ── Dynamic Album Theme ────────────────────────────────────────────────
@@ -552,7 +685,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
                     _amoledBlack.value = prefs.getBoolean(KEY_AMOLED_BLACK, false)
                     _dynamicAlbumTheme.value = prefs.getBoolean(KEY_DYNAMIC_ALBUM_THEME, false)
                     _vibrationStrength.value = prefs.getFloat(KEY_VIBRATION_STRENGTH, 80f)
-                    _crossfadeEnabled.value = prefs.getBoolean(KEY_CROSSFADE_ENABLED, false)
+                    _crossfadeEnabled.value = prefs.getBoolean(KEY_CROSSFADE_ENABLED, true)
                     _crossfadeDuration.value = prefs.getFloat(KEY_CROSSFADE_DURATION, 3f)
                     _audioFocus.value = prefs.getBoolean(KEY_AUDIO_FOCUS, true)
                     _dataSaver.value = prefs.getBoolean(KEY_DATA_SAVER, false)
@@ -755,6 +888,19 @@ fun SettingsScreenContent(
     val dynamicAlbumTheme by viewModel.dynamicAlbumTheme.collectAsStateWithLifecycle()
     val hideNavLabels by viewModel.hideNavLabels.collectAsStateWithLifecycle()
     val dynamicNavStyle by viewModel.dynamicNavStyle.collectAsStateWithLifecycle()
+    val albumArtTransition by viewModel.albumArtTransition.collectAsStateWithLifecycle()
+    val lyricsFilmGrain by viewModel.lyricsFilmGrain.collectAsStateWithLifecycle()
+    val navigationStyle by viewModel.navigationStyle.collectAsStateWithLifecycle()
+    val slideNavOnScroll by viewModel.slideNavOnScroll.collectAsStateWithLifecycle()
+    val forceHighRefreshRate by viewModel.forceHighRefreshRate.collectAsStateWithLifecycle()
+    val frostedGlass by viewModel.frostedGlass.collectAsStateWithLifecycle()
+    val solidStateSurfaces by viewModel.solidStateSurfaces.collectAsStateWithLifecycle()
+    val tabSwitchingBlur by viewModel.tabSwitchingBlur.collectAsStateWithLifecycle()
+    val playerTheme by viewModel.playerTheme.collectAsStateWithLifecycle()
+    val seekBarStyle by viewModel.seekBarStyle.collectAsStateWithLifecycle()
+    val animatedAlbumArt by viewModel.animatedAlbumArt.collectAsStateWithLifecycle()
+    val playerGradientBlur by viewModel.playerGradientBlur.collectAsStateWithLifecycle()
+    val showAudioCodec by viewModel.showAudioCodec.collectAsStateWithLifecycle()
     val vibrationStrength by viewModel.vibrationStrength.collectAsStateWithLifecycle()
     val crossfadeEnabled by viewModel.crossfadeEnabled.collectAsStateWithLifecycle()
     val crossfadeDuration by viewModel.crossfadeDuration.collectAsStateWithLifecycle()
@@ -900,7 +1046,7 @@ fun SettingsScreenContent(
         composable(SettingsRoute.BackupRestore.route) {
             BackupRestoreScreen(
                 navController = navController,
-                onBackupClick = { exportBackupLauncher.launch("spatialflow_backup.json") },
+                onBackupClick = { exportBackupLauncher.launch("moonwave_backup.json") },
                 onRestoreClick = { importBackupLauncher.launch(arrayOf("application/json")) }
             )
         }
@@ -927,7 +1073,33 @@ fun SettingsScreenContent(
                 hideNavLabels = hideNavLabels,
                 onHideNavLabelsChange = { viewModel.setHideNavLabels(it) },
                 dynamicNavStyle = dynamicNavStyle,
-                onDynamicNavStyleChange = { viewModel.setDynamicNavStyle(it) }
+                onDynamicNavStyleChange = { viewModel.setDynamicNavStyle(it) },
+                albumArtTransition = albumArtTransition,
+                onAlbumArtTransitionChange = { viewModel.setAlbumArtTransition(it) },
+                lyricsFilmGrain = lyricsFilmGrain,
+                onLyricsFilmGrainChange = { viewModel.setLyricsFilmGrain(it) },
+                navigationStyle = navigationStyle,
+                onNavigationStyleChange = { viewModel.setNavigationStyle(it) },
+                slideNavOnScroll = slideNavOnScroll,
+                onSlideNavOnScrollChange = { viewModel.setSlideNavOnScroll(it) },
+                forceHighRefreshRate = forceHighRefreshRate,
+                onForceHighRefreshRateChange = { viewModel.setForceHighRefreshRate(it) },
+                frostedGlass = frostedGlass,
+                onFrostedGlassChange = { viewModel.setFrostedGlass(it) },
+                solidStateSurfaces = solidStateSurfaces,
+                onSolidStateSurfacesChange = { viewModel.setSolidStateSurfaces(it) },
+                tabSwitchingBlur = tabSwitchingBlur,
+                onTabSwitchingBlurChange = { viewModel.setTabSwitchingBlur(it) },
+                playerTheme = playerTheme,
+                onPlayerThemeChange = { viewModel.setPlayerTheme(it) },
+                seekBarStyle = seekBarStyle,
+                onSeekBarStyleChange = { viewModel.setSeekBarStyle(it) },
+                animatedAlbumArt = animatedAlbumArt,
+                onAnimatedAlbumArtChange = { viewModel.setAnimatedAlbumArt(it) },
+                playerGradientBlur = playerGradientBlur,
+                onPlayerGradientBlurChange = { viewModel.setPlayerGradientBlur(it) },
+                showAudioCodec = showAudioCodec,
+                onShowAudioCodecChange = { viewModel.setShowAudioCodec(it) }
             )
         }
         composable(SettingsRoute.Playback.route) {
@@ -1672,8 +1844,55 @@ private fun AppearanceScreen(
     hideNavLabels: Boolean,
     onHideNavLabelsChange: (Boolean) -> Unit,
     dynamicNavStyle: Boolean,
-    onDynamicNavStyleChange: (Boolean) -> Unit
+    onDynamicNavStyleChange: (Boolean) -> Unit,
+    albumArtTransition: String,
+    onAlbumArtTransitionChange: (String) -> Unit,
+    lyricsFilmGrain: Boolean,
+    onLyricsFilmGrainChange: (Boolean) -> Unit,
+    navigationStyle: String,
+    onNavigationStyleChange: (String) -> Unit,
+    slideNavOnScroll: Boolean,
+    onSlideNavOnScrollChange: (Boolean) -> Unit,
+    forceHighRefreshRate: Boolean,
+    onForceHighRefreshRateChange: (Boolean) -> Unit,
+    frostedGlass: Boolean,
+    onFrostedGlassChange: (Boolean) -> Unit,
+    solidStateSurfaces: Boolean,
+    onSolidStateSurfacesChange: (Boolean) -> Unit,
+    tabSwitchingBlur: Boolean,
+    onTabSwitchingBlurChange: (Boolean) -> Unit,
+    playerTheme: String,
+    onPlayerThemeChange: (String) -> Unit,
+    seekBarStyle: String,
+    onSeekBarStyleChange: (String) -> Unit,
+    animatedAlbumArt: Boolean,
+    onAnimatedAlbumArtChange: (Boolean) -> Unit,
+    playerGradientBlur: Boolean,
+    onPlayerGradientBlurChange: (Boolean) -> Unit,
+    showAudioCodec: Boolean,
+    onShowAudioCodecChange: (Boolean) -> Unit
 ) {
+    var showTransitionSheet by remember { mutableStateOf(false) }
+    var showNavSheet by remember { mutableStateOf(false) }
+    var showSeekBarSheet by remember { mutableStateOf(false) }
+
+    val context = LocalContext.current
+    val maxRefreshRate = remember(context) {
+        val rate = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            context.display?.mode?.refreshRate
+        } else {
+            @Suppress("DEPRECATION")
+            (context.getSystemService(Context.WINDOW_SERVICE) as? android.view.WindowManager)
+                ?.defaultDisplay?.refreshRate
+        }
+        rate?.let { if (it >= 60f) "${it.roundToInt()} Hz" else "60 Hz" } ?: "60 Hz"
+    }
+
+    val floatingNav = navigationStyle == AppearancePrefs.NAV_FLOATING
+    val transitionLabel = albumArtTransitionLabel(albumArtTransition)
+    val navStyleLabel = if (floatingNav) "Floating Expressive Bar" else "Docked Navigation Bar"
+    val seekBarLabel = seekBarStyleLabel(seekBarStyle)
+
     Scaffold(
         topBar = { SettingsDetailTopBar("Appearance") { navController.popBackStack() } }
     ) { paddingValues ->
@@ -1694,11 +1913,556 @@ private fun AppearanceScreen(
                 add { DynamicAlbumThemeRow(dynamicAlbumTheme, onDynamicAlbumThemeChange) }
             })
 
+            SettingsHeader("Player Artwork")
+            SettingsGroupCard(listOf(
+                {
+                    AppearanceSelectorRow(
+                        iconRes = R.drawable.ic_music_note,
+                        title = "Album Art Transition",
+                        subtitle = transitionLabel,
+                        onClick = { showTransitionSheet = true }
+                    )
+                },
+                {
+                    AppearanceSwitchRow(
+                        iconRes = R.drawable.ic_lyrics,
+                        title = "Lyrics Background Film Grain",
+                        subtitle = "MOONWAVE-style analog texture that eliminates gradient banding",
+                        checked = lyricsFilmGrain,
+                        onCheckedChange = onLyricsFilmGrainChange
+                    )
+                }
+            ))
+
             SettingsHeader("Navigation Bar")
             SettingsGroupCard(buildList {
-                add { HideNavLabelsRow(hideNavLabels, onHideNavLabelsChange) }
-                add { DynamicNavStyleRow(dynamicNavStyle, onDynamicNavStyleChange) }
+                add {
+                    AppearanceSelectorRow(
+                        iconRes = R.drawable.ic_appearance,
+                        title = "Navigation Bar Style",
+                        subtitle = navStyleLabel,
+                        onClick = { showNavSheet = true }
+                    )
+                }
+                add {
+                    AppearanceSwitchRow(
+                        iconRes = R.drawable.ic_explore,
+                        title = "Slide Navigation on Scroll",
+                        subtitle = "Slide navigation bar out of view when scrolling down",
+                        checked = slideNavOnScroll,
+                        onCheckedChange = onSlideNavOnScrollChange
+                    )
+                }
+                add {
+                    AppearanceSwitchRow(
+                        iconRes = R.drawable.ic_settings,
+                        title = "Hide Navigation Labels",
+                        subtitle = "Remove text labels from the bottom navigation bar (Floating and Compact included)",
+                        checked = hideNavLabels,
+                        onCheckedChange = onHideNavLabelsChange
+                    )
+                }
+                add {
+                    AppearanceSwitchRow(
+                        iconRes = R.drawable.ic_equalizer,
+                        title = "Compact Navbar Icons",
+                        subtitle = "Tighter bar with smaller icons — works with Floating and Docked bars, and supports hidden labels",
+                        checked = dynamicNavStyle,
+                        onCheckedChange = onDynamicNavStyleChange
+                    )
+                }
             })
+
+            SettingsHeader("Surfaces")
+            SettingsGroupCard(listOf(
+                {
+                    AppearanceSwitchRow(
+                        iconRes = R.drawable.ic_appearance,
+                        title = "Frosted Glass",
+                        subtitle = "Real-time blur behind the navigation bar and mini player",
+                        checked = frostedGlass,
+                        badge = if (frostedGlass) "ACTIVE" else null,
+                        onCheckedChange = onFrostedGlassChange
+                    )
+                },
+                {
+                    AppearanceSwitchRow(
+                        iconRes = R.drawable.ic_music_note,
+                        title = "Solid State Surfaces",
+                        subtitle = "Opaque, album-harmonized surface across the navigation bar and mini player (maximum performance, zero blur)",
+                        checked = solidStateSurfaces,
+                        onCheckedChange = onSolidStateSurfacesChange
+                    )
+                },
+                {
+                    AppearanceSwitchRow(
+                        iconRes = R.drawable.ic_appearance,
+                        title = "Tab Switching Blur",
+                        subtitle = "Blur the background when switching main navigation tabs (GPU-intensive)",
+                        checked = tabSwitchingBlur,
+                        onCheckedChange = onTabSwitchingBlurChange
+                    )
+                }
+            ))
+
+            SettingsHeader("Display & Performance")
+            SettingsGroupCard(listOf(
+                {
+                    AppearanceSwitchRow(
+                        iconRes = R.drawable.ic_refresh,
+                        title = "Force high refresh rate",
+                        subtitle = "Max supported: $maxRefreshRate",
+                        checked = forceHighRefreshRate,
+                        onCheckedChange = onForceHighRefreshRateChange
+                    )
+                }
+            ))
+
+            SettingsHeader("Now Playing Screen")
+            SettingsGroupCard(listOf(
+                {
+                    AppearanceSelectorRow(
+                        iconRes = R.drawable.ic_equalizer,
+                        title = "Seek Bar Style",
+                        subtitle = seekBarLabel,
+                        onClick = { showSeekBarSheet = true }
+                    )
+                },
+                {
+                    AppearanceSwitchRow(
+                        iconRes = R.drawable.ic_music_note,
+                        title = "Animated Album Art",
+                        subtitle = "Show looping motion and depth on the player screen",
+                        checked = animatedAlbumArt,
+                        onCheckedChange = onAnimatedAlbumArtChange
+                    )
+                },
+                {
+                    AppearanceSwitchRow(
+                        iconRes = R.drawable.ic_appearance,
+                        title = "Fluid Theme",
+                        subtitle = "Organic, drifting colors and motion in the player background",
+                        checked = playerTheme == AppearancePrefs.PLAYER_FLUID,
+                        badge = if (playerTheme == AppearancePrefs.PLAYER_FLUID) "ACTIVE" else null,
+                        onCheckedChange = { enabled ->
+                            onPlayerThemeChange(if (enabled) AppearancePrefs.PLAYER_FLUID else AppearancePrefs.PLAYER_STATIC)
+                        }
+                    )
+                },
+                {
+                    AppearanceSwitchRow(
+                        iconRes = R.drawable.ic_equalizer,
+                        title = "Show Audio Codec",
+                        subtitle = "Display the detected stream codec badge in the player transport",
+                        checked = showAudioCodec,
+                        onCheckedChange = onShowAudioCodecChange
+                    )
+                }
+            ))
+        }
+    }
+
+    if (showTransitionSheet) {
+        AppearanceOptionSheet(
+            title = "Album Art Transition",
+            options = listOf(
+                AppearanceOption(AppearancePrefs.TRANSITION_SHUFFLE, "Shuffle (3D Card Deal)", "Deal each cover in with a spring-loaded 3D tilt"),
+                AppearanceOption(AppearancePrefs.TRANSITION_FLIP, "Flip (3D Card Flip)", "Flip the cover around its vertical axis"),
+                AppearanceOption(AppearancePrefs.TRANSITION_PUSH, "Push (Parallax Slide)", "Push the old cover aside with a parallax slide"),
+                AppearanceOption(AppearancePrefs.TRANSITION_CROSSFADE, "Crossfade (Scale Settle)", "Crossfade with a gentle scale settle"),
+                AppearanceOption(AppearancePrefs.TRANSITION_SLIDE, "Slide (Horizontal Pager)", "Classic horizontal pager slide")
+            ),
+            selected = albumArtTransition,
+            onSelect = { onAlbumArtTransitionChange(it); showTransitionSheet = false },
+            onDismiss = { showTransitionSheet = false }
+        )
+    }
+
+    if (showNavSheet) {
+        AppearanceOptionSheet(
+            title = "Navigation Bar Style",
+            options = listOf(
+                AppearanceOption(AppearancePrefs.NAV_DOCKED, "Docked Navigation Bar", "Classic full-width bottom navigation bar docked at the bottom of the screen, with rounded corners."),
+                AppearanceOption(AppearancePrefs.NAV_FLOATING, "Floating Expressive Bar", "Floating pill navigation bar with dynamic morphing pills and tactile spring animations.")
+            ),
+            selected = navigationStyle,
+            onSelect = { onNavigationStyleChange(it); showNavSheet = false },
+            onDismiss = { showNavSheet = false }
+        )
+    }
+
+    if (showSeekBarSheet) {
+        SeekBarStyleSheet(
+            selected = seekBarStyle,
+            onSelect = { onSeekBarStyleChange(it); showSeekBarSheet = false },
+            onDismiss = { showSeekBarSheet = false }
+        )
+    }
+}
+
+private data class AppearanceOption(
+    val id: String,
+    val title: String,
+    val description: String
+)
+
+private fun albumArtTransitionLabel(id: String): String = when (id) {
+    AppearancePrefs.TRANSITION_FLIP -> "Flip (3D Card Flip)"
+    AppearancePrefs.TRANSITION_PUSH -> "Push (Parallax Slide)"
+    AppearancePrefs.TRANSITION_CROSSFADE -> "Crossfade (Scale Settle)"
+    AppearancePrefs.TRANSITION_SLIDE -> "Slide (Horizontal Pager)"
+    else -> "Shuffle (3D Card Deal)"
+}
+
+private fun seekBarStyleLabel(id: String): String = when (id) {
+    AppearancePrefs.SEEK_CAPSULE -> "MOONWAVE Capsule Scrub"
+    AppearancePrefs.SEEK_WAVY -> "Wavy (Animated Sine)"
+    AppearancePrefs.SEEK_CLASSIC -> "Classic Line (Minimalist)"
+    else -> "Expressive Waves (Fluid Fill)"
+}
+
+@Composable
+private fun AppearanceSelectorRow(
+    iconRes: Int,
+    title: String,
+    subtitle: String,
+    onClick: () -> Unit
+) {
+    ListItem(
+        onClick = onClick,
+        leadingContent = {
+            Icon(
+                painter = painterResource(id = iconRes),
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(24.dp)
+            )
+        },
+        content = {
+            Column {
+                Text(text = title, style = MaterialTheme.typography.bodyLarge)
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        },
+        trailingContent = {
+            Icon(
+                imageVector = Icons.Filled.ChevronRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        },
+        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+    )
+}
+
+@Composable
+private fun AppearanceSwitchRow(
+    iconRes: Int,
+    title: String,
+    subtitle: String,
+    checked: Boolean,
+    enabled: Boolean = true,
+    badge: String? = null,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    ListItem(
+        onClick = { if (enabled) onCheckedChange(!checked) },
+        leadingContent = {
+            Icon(
+                painter = painterResource(id = iconRes),
+                contentDescription = null,
+                tint = if (enabled) MaterialTheme.colorScheme.primary
+                else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f),
+                modifier = Modifier.size(24.dp)
+            )
+        },
+        content = {
+            Column {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = if (enabled) MaterialTheme.colorScheme.onSurface
+                        else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                    )
+                    if (badge != null) {
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.18f)
+                        ) {
+                            Text(
+                                text = badge,
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                            )
+                        }
+                    }
+                }
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (enabled) MaterialTheme.colorScheme.onSurfaceVariant
+                    else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f)
+                )
+            }
+        },
+        trailingContent = {
+            Switch(
+                checked = checked,
+                onCheckedChange = if (enabled) onCheckedChange else null,
+                enabled = enabled
+            )
+        },
+        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AppearanceOptionSheet(
+    title: String,
+    options: List<AppearanceOption>,
+    selected: String,
+    onSelect: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    androidx.compose.material3.ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 32.dp)
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(top = 8.dp, bottom = 12.dp)
+            )
+            options.forEach { option ->
+                val isSelected = option.id == selected
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(20.dp))
+                        .clickable { onSelect(option.id) }
+                        .padding(vertical = 12.dp, horizontal = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    RadioButton(selected = isSelected, onClick = { onSelect(option.id) })
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = option.title,
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
+                        )
+                        Text(
+                            text = option.description,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+            TextButton(
+                onClick = onDismiss,
+                modifier = Modifier.align(Alignment.End)
+            ) {
+                Text("Close")
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SeekBarStyleSheet(
+    selected: String,
+    onSelect: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val options = listOf(
+        Triple(AppearancePrefs.SEEK_CAPSULE, "MOONWAVE" to "Capsule Scrub", "Minimalist rounded capsule that smoothly expands with tactile spring physics when touched."),
+        Triple(AppearancePrefs.SEEK_WAVY, "Wavy" to "Animated Sine", "Animated sine wave that flattens into a precise linear track during active scrubbing."),
+        Triple(AppearancePrefs.SEEK_CLASSIC, "Classic Line" to "Minimalist", "Standard sleek line progress bar with a classic circular thumb indicator."),
+        Triple(AppearancePrefs.SEEK_EXPRESSIVE, "Expressive Waves" to "Fluid Harmonic", "Multi-layer volumetric fluid waves with dynamic harmonic flow and tactile seek ripple.")
+    )
+    androidx.compose.material3.ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 32.dp)
+        ) {
+            Text(
+                text = "Seek Bar Style",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(top = 8.dp)
+            )
+            Text(
+                text = "Select your preferred scrubber physics and visual waveform",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 4.dp, bottom = 12.dp)
+            )
+            options.forEach { (id, labels, description) ->
+                val isSelected = id == selected
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 6.dp)
+                        .clip(RoundedCornerShape(24.dp))
+                        .background(
+                            if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)
+                            else Color.Transparent
+                        )
+                        .clickable { onSelect(id) }
+                        .padding(horizontal = 8.dp, vertical = 10.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = labels.first,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = MaterialTheme.colorScheme.surfaceContainerHighest
+                        ) {
+                            Text(
+                                text = labels.second,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.weight(1f))
+                        RadioButton(selected = isSelected, onClick = { onSelect(id) })
+                    }
+                    Text(
+                        text = description,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 4.dp, bottom = 10.dp)
+                    )
+                    SeekBarStylePreview(
+                        style = id,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(64.dp)
+                    )
+                }
+            }
+            TextButton(
+                onClick = onDismiss,
+                modifier = Modifier.align(Alignment.End)
+            ) {
+                Text("Close")
+            }
+        }
+    }
+}
+
+@Composable
+private fun SeekBarStylePreview(style: String, modifier: Modifier = Modifier) {
+    val active = MaterialTheme.colorScheme.primary
+    val inactive = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f)
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(16.dp))
+            .background(MaterialTheme.colorScheme.surfaceContainerHighest),
+        contentAlignment = Alignment.Center
+    ) {
+        androidx.compose.foundation.Canvas(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(32.dp)
+                .padding(horizontal = 18.dp)
+        ) {
+            val centerY = size.height / 2f
+            val progress = 0.5f
+            val trackStart = 0f
+            val trackEnd = size.width
+            val progressX = trackStart + (trackEnd - trackStart) * progress
+            when (style) {
+                AppearancePrefs.SEEK_CAPSULE -> {
+                    drawLine(
+                        color = inactive,
+                        start = Offset(trackStart, centerY),
+                        end = Offset(trackEnd, centerY),
+                        strokeWidth = 8.dp.toPx(),
+                        cap = androidx.compose.ui.graphics.StrokeCap.Round
+                    )
+                    drawLine(
+                        color = active,
+                        start = Offset(trackStart, centerY),
+                        end = Offset(progressX, centerY),
+                        strokeWidth = 8.dp.toPx(),
+                        cap = androidx.compose.ui.graphics.StrokeCap.Round
+                    )
+                }
+                AppearancePrefs.SEEK_CLASSIC -> {
+                    drawLine(
+                        color = inactive,
+                        start = Offset(trackStart, centerY),
+                        end = Offset(trackEnd, centerY),
+                        strokeWidth = 3.dp.toPx(),
+                        cap = androidx.compose.ui.graphics.StrokeCap.Round
+                    )
+                    drawLine(
+                        color = active,
+                        start = Offset(trackStart, centerY),
+                        end = Offset(progressX, centerY),
+                        strokeWidth = 3.dp.toPx(),
+                        cap = androidx.compose.ui.graphics.StrokeCap.Round
+                    )
+                    drawCircle(color = active, radius = 6.dp.toPx(), center = Offset(progressX, centerY))
+                }
+                AppearancePrefs.SEEK_WAVY, AppearancePrefs.SEEK_EXPRESSIVE -> {
+                    val amplitude = if (style == AppearancePrefs.SEEK_EXPRESSIVE) 8.dp.toPx() else 5.dp.toPx()
+                    val path = androidx.compose.ui.graphics.Path()
+                    val inactivePath = androidx.compose.ui.graphics.Path()
+                    val wavelength = size.width / 3.2f
+                    var x = trackStart
+                    path.moveTo(x, centerY)
+                    inactivePath.moveTo(x, centerY)
+                    while (x <= trackEnd) {
+                        val y = centerY + kotlin.math.sin((x / wavelength) * (2f * Math.PI).toFloat()) * amplitude
+                        path.lineTo(x, y)
+                        val inactiveY = if (x >= progressX) y else centerY
+                        inactivePath.lineTo(x, inactiveY)
+                        x += 2f
+                    }
+                    drawPath(inactivePath, color = inactive, style = androidx.compose.ui.graphics.drawscope.Stroke(width = 3.dp.toPx(), cap = androidx.compose.ui.graphics.StrokeCap.Round))
+                    if (style == AppearancePrefs.SEEK_EXPRESSIVE) {
+                        drawPath(path, color = active.copy(alpha = 0.25f), style = androidx.compose.ui.graphics.drawscope.Stroke(width = 12.dp.toPx(), cap = androidx.compose.ui.graphics.StrokeCap.Round))
+                    }
+                    drawPath(path, color = active, style = androidx.compose.ui.graphics.drawscope.Stroke(width = 4.dp.toPx(), cap = androidx.compose.ui.graphics.StrokeCap.Round))
+                    drawCircle(color = Color.White, radius = 7.dp.toPx(), center = Offset(progressX, centerY))
+                    drawCircle(color = active, radius = 5.dp.toPx(), center = Offset(progressX, centerY))
+                }
+            }
         }
     }
 }
@@ -2958,117 +3722,78 @@ private fun CreditsCard(onOpenUrl: (String) -> Unit) {
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        // Upstream projects whose design and assets MOONWAVE builds upon.
+        UpstreamCreditCard(
+            avatarUrl = "https://github.com/realidkroo.png",
+            name = "realidkroo",
+            role = "Mochy Music",
+            detail = "UI interaction components, 3D tactile press physics and glossy cover reflection adapted from Mochy Music (GPL-3.0).",
+            url = "https://github.com/realidkroo/Mochy-Music",
+            onOpenUrl = onOpenUrl
+        )
+        UpstreamCreditCard(
+            avatarUrl = "https://github.com/MythicalSHUB.png",
+            name = "Shubham Karande",
+            role = "SpatialFlow",
+            detail = "Audio architecture, streaming integration and player UI derived from SpatialFlow (Apache-2.0).",
+            url = "https://github.com/MythicalSHUB/SpatialFlow",
+            onOpenUrl = onOpenUrl
+        )
+    }
+}
 
-        // Open Source Attribution: Shubham Karande (SpatialFlow)
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainerLow
-            )
+@Composable
+private fun UpstreamCreditCard(
+    avatarUrl: String,
+    name: String,
+    role: String,
+    detail: String,
+    url: String,
+    onOpenUrl: (String) -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Column(
+            coil.compose.AsyncImage(
+                model = avatarUrl,
+                contentDescription = name,
                 modifier = Modifier
-                    .padding(24.dp)
-                    .fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                coil.compose.AsyncImage(
-                    model = "https://github.com/MythicalSHUB.png",
-                    contentDescription = "Shubham Karande",
-                    modifier = Modifier
-                        .size(72.dp)
-                        .clip(CircleShape),
-                    contentScale = androidx.compose.ui.layout.ContentScale.Crop
-                )
-                
+                    .size(52.dp)
+                    .clip(CircleShape),
+                contentScale = androidx.compose.ui.layout.ContentScale.Crop
+            )
+            Spacer(modifier = Modifier.width(14.dp))
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Shubham Karande",
-                    style = MaterialTheme.typography.titleLarge,
+                    text = name,
+                    style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.padding(top = 12.dp)
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
-                    text = "Original Creator & Architect of SpatialFlow",
-                    style = MaterialTheme.typography.bodyMedium,
+                    text = role,
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.padding(top = 2.dp)
+                    fontWeight = FontWeight.SemiBold
                 )
                 Text(
-                    text = "Upstream open-source foundation, audio architecture & baseline design",
+                    text = detail,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 4.dp)
                 )
-                
-                Row(
-                    modifier = Modifier.padding(top = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    SocialIconButton(icon = R.drawable.ic_github, onClick = { onOpenUrl("https://github.com/MythicalSHUB/SpatialFlow") })
-                    SocialIconButton(icon = R.drawable.ic_instagram, onClick = { onOpenUrl("https://instagram.com/mythicalshub") })
-                    SocialIconButton(icon = R.drawable.ic_youtube, onClick = { onOpenUrl("https://youtube.com/@8dmusic_s") })
-                }
             }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Open Source Attribution: Mochy Music
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainerLow
-            )
-        ) {
-            Column(
-                modifier = Modifier
-                    .padding(24.dp)
-                    .fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                coil.compose.AsyncImage(
-                    model = "https://github.com/realidkroo.png",
-                    contentDescription = "realidkroo",
-                    modifier = Modifier
-                        .size(72.dp)
-                        .clip(CircleShape),
-                    contentScale = androidx.compose.ui.layout.ContentScale.Crop
-                )
-                
-                Text(
-                    text = "Mochy Music (realidkroo)",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.padding(top = 12.dp)
-                )
-                Text(
-                    text = "UI Design & Motion Physics",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.padding(top = 2.dp)
-                )
-                Text(
-                    text = "3D tactile press physics, squircle superellipses, and cover reflection animations",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 4.dp),
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                )
-                
-                Row(
-                    modifier = Modifier.padding(top = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    SocialIconButton(icon = R.drawable.ic_github, onClick = { onOpenUrl("https://github.com/realidkroo/Mochy-Music") })
-                }
-            }
+            SocialIconButton(icon = R.drawable.ic_github, onClick = { onOpenUrl(url) })
         }
     }
 }

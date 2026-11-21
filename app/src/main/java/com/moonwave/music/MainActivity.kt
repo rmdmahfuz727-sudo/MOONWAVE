@@ -22,6 +22,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -52,6 +53,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
@@ -73,6 +75,8 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.moonwave.music.model.SongItem
 import com.moonwave.music.service.AudioPlaybackService
+import com.moonwave.music.ui.component.AppearancePrefs
+import com.moonwave.music.ui.component.DockedNavigationBar
 import com.moonwave.music.ui.EffectsScreenEntryPoint
 import com.moonwave.music.ui.PlayerBottomSheetCompose
 import com.moonwave.music.ui.SettingsScreenContent
@@ -81,7 +85,6 @@ import com.moonwave.music.ui.explore.ExploreScreen
 import com.moonwave.music.ui.explore.GoogleSignInScreen
 import com.moonwave.music.ui.library.LibraryScreen
 import com.moonwave.music.ui.theme.MoonwaveTheme
-import com.moonwave.music.ui.theme.SpatialFlowTheme
 import com.moonwave.music.ui.theme.observeKey
 import com.moonwave.music.ui.onboarding.OnboardingScreen
 import android.content.Context
@@ -114,12 +117,43 @@ class MainActivity : AppCompatActivity() {
     var isBottomNavVisible by mutableStateOf(true)
         private set
 
+    private val appearancePrefs by lazy {
+        getSharedPreferences(AppearancePrefs.PREFS, Context.MODE_PRIVATE)
+    }
+
     fun hideBottomNavWithAnimation() {
-        isBottomNavVisible = false
+        if (appearancePrefs.getBoolean(AppearancePrefs.SLIDE_NAV_ON_SCROLL, true)) {
+            isBottomNavVisible = false
+        }
     }
 
     fun showBottomNavWithAnimation() {
         isBottomNavVisible = true
+    }
+
+    /**
+     * Applies the "Force high refresh rate" appearance preference to the window. When enabled the
+     * window is allowed to pick the display's fastest supported mode; when disabled it is pinned
+     * to the closest 60 Hz mode.
+     */
+    fun applyRefreshRatePreference(forceHigh: Boolean) {
+        try {
+            val attrs = window.attributes
+            attrs.preferredRefreshRate = if (forceHigh) 0f else 60f
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                val display = windowManager.defaultDisplay
+                val modes = display.supportedModes
+                val target = if (forceHigh) {
+                    modes.maxByOrNull { it.refreshRate }
+                } else {
+                    modes.minByOrNull { kotlin.math.abs(it.refreshRate - 60f) }
+                }
+                attrs.preferredDisplayModeId = target?.modeId ?: 0
+            }
+            window.attributes = attrs
+        } catch (e: Exception) {
+            Log.w("MainActivity", "Unable to apply refresh rate preference", e)
+        }
     }
 
     private val serviceConnection = object : ServiceConnection {
@@ -178,7 +212,14 @@ class MainActivity : AppCompatActivity() {
             MoonwaveTheme(darkTheme = isDarkTheme, dynamicAlbumColor = dynamicAlbumColor) {
                 val hideNavLabels by prefs.observeKey("hide_nav_labels", false)
                 val dynamicNavStyle by prefs.observeKey("dynamic_nav_style", false)
+                val navigationStyle by prefs.observeKey(AppearancePrefs.NAVIGATION_STYLE, AppearancePrefs.NAV_FLOATING)
+                val forceHighRefreshRate by prefs.observeKey(AppearancePrefs.FORCE_HIGH_REFRESH_RATE, true)
+                val tabSwitchingBlur by prefs.observeKey(AppearancePrefs.TAB_SWITCHING_BLUR, false)
                 val hasSeenOnboarding by prefs.observeKey("has_seen_onboarding_1_8", false)
+
+                LaunchedEffect(forceHighRefreshRate) {
+                    applyRefreshRatePreference(forceHighRefreshRate)
+                }
 
                 val currentNavController = rememberNavController()
                 LaunchedEffect(currentNavController) {
@@ -252,25 +293,37 @@ class MainActivity : AppCompatActivity() {
                                 Triple("effects", "Effects", R.drawable.ic_equalizer),
                                 Triple("settings", "Settings", R.drawable.ic_settings)
                             )
-                            com.moonwave.music.ui.component.MochyNavigationBar(
-                                items = items,
-                                currentRoute = currentDestination?.route,
-                                hideNavLabels = hideNavLabels,
-                                onItemClick = { route ->
-                                    if (route == "explore") {
-                                        exploreViewModel.resetToHome()
-                                    }
-                                    if (currentDestination?.route != route) {
-                                        currentNavController.navigate(route) {
-                                            popUpTo(currentNavController.graph.findStartDestination().id) {
-                                                saveState = true
-                                            }
-                                            launchSingleTop = true
-                                            restoreState = true
+                            val onNavigate: (String) -> Unit = { route ->
+                                if (route == "explore") {
+                                    exploreViewModel.resetToHome()
+                                }
+                                if (currentDestination?.route != route) {
+                                    currentNavController.navigate(route) {
+                                        popUpTo(currentNavController.graph.findStartDestination().id) {
+                                            saveState = true
                                         }
+                                        launchSingleTop = true
+                                        restoreState = true
                                     }
                                 }
-                            )
+                            }
+                            if (navigationStyle == AppearancePrefs.NAV_DOCKED) {
+                                DockedNavigationBar(
+                                    items = items,
+                                    currentRoute = currentDestination?.route,
+                                    hideNavLabels = hideNavLabels,
+                                    compact = dynamicNavStyle,
+                                    onItemClick = onNavigate
+                                )
+                            } else {
+                                com.moonwave.music.ui.component.MoonwaveNavigationBar(
+                                    items = items,
+                                    currentRoute = currentDestination?.route,
+                                    hideNavLabels = hideNavLabels,
+                                    compact = dynamicNavStyle,
+                                    onItemClick = onNavigate
+                                )
+                            }
                         }
                     }
                 ) { paddingValues ->
@@ -300,6 +353,21 @@ class MainActivity : AppCompatActivity() {
                     // The player sheet covers the NavHost anyway, so keeping padding static is optimal
                     val finalPadding = animatedBasePaddingState.value
 
+                    val tabSwitchBlurRadius = remember { Animatable(0f) }
+                    LaunchedEffect(currentDestination?.route) {
+                        if (tabSwitchingBlur) {
+                            // Stronger, slightly longer blur makes the home screen's large cards
+                            // dissolve into the next tab instead of hard-cutting.
+                            tabSwitchBlurRadius.snapTo(26f)
+                            tabSwitchBlurRadius.animateTo(
+                                targetValue = 0f,
+                                animationSpec = tween(durationMillis = 520)
+                            )
+                        } else {
+                            tabSwitchBlurRadius.snapTo(0f)
+                        }
+                    }
+
                     Box(
                         modifier = Modifier.fillMaxSize()
                     ) {
@@ -307,6 +375,7 @@ class MainActivity : AppCompatActivity() {
                             modifier = Modifier
                                 .fillMaxSize()
                                 .padding(bottom = finalPadding.coerceAtLeast(0.dp))
+                                .blur(tabSwitchBlurRadius.value.dp)
                         ) {
                             val routeIndices = remember {
                                 mapOf(

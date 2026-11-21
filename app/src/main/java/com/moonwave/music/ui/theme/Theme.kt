@@ -270,10 +270,3 @@ internal tailrec fun android.content.Context.findActivity(): Activity? = when (t
     is ContextWrapper -> baseContext.findActivity()
     else -> null
 }
-
-@Composable
-fun SpatialFlowTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
-    dynamicAlbumColor: Int? = null,
-    content: @Composable () -> Unit
-) = MoonwaveTheme(darkTheme, dynamicAlbumColor, content)

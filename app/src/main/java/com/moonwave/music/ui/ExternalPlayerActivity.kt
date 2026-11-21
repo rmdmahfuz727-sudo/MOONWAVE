@@ -69,7 +69,6 @@ import com.moonwave.music.MainActivity
 import com.moonwave.music.service.AudioPlaybackService
 import com.moonwave.music.ui.player.WavyMusicSlider
 import com.moonwave.music.ui.theme.MoonwaveTheme
-import com.moonwave.music.ui.theme.SpatialFlowTheme
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay

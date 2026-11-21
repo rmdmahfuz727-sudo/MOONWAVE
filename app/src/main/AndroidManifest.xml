@@ -110,7 +110,7 @@
             </intent-filter>
         </receiver>
 
-        <!-- SpatialFlow App Widgets -->
+        <!-- Moonwave App Widgets -->
 
         <receiver
             android:name=".ui.widget.WidgetSmallProvider"

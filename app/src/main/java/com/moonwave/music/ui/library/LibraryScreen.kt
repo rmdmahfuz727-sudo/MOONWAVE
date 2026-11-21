@@ -287,32 +287,32 @@ fun LibraryScreen(
                 val userProfile by accountViewModel?.userProfile?.collectAsStateWithLifecycle() ?: remember { mutableStateOf(null) }
                 var librarySearchQuery by remember { mutableStateOf("") }
 
-                // Mochy Library Top Bar
-                com.moonwave.music.ui.component.MochyLibraryTopBar(
+                // Moonwave Library Top Bar
+                com.moonwave.music.ui.component.MoonwaveLibraryTopBar(
                     avatarUrl = userProfile?.avatarUrl,
                     onAvatarClick = { showAccountScreen = true },
                     onHistoryClick = { showHistoryScreen = true }
                 )
 
-                // Mochy Library Search Bar
-                com.moonwave.music.ui.component.MochyLibrarySearchBar(
+                // Moonwave Library Search Bar
+                com.moonwave.music.ui.component.MoonwaveLibrarySearchBar(
                     query = librarySearchQuery,
                     onQueryChange = { librarySearchQuery = it }
                 )
 
-                // Mochy Library Filter Chips
-                com.moonwave.music.ui.component.MochyLibraryFilterChips(
+                // Moonwave Library Filter Chips
+                com.moonwave.music.ui.component.MoonwaveLibraryFilterChips(
                     selectedTab = when (activeTab) {
-                        "Device Files" -> "Local & downloaded"
+                        "Local Files" -> "Local"
+                        "Downloads" -> "Downloads"
                         "Cached" -> "Cached"
-                        "Imported" -> "Imported"
                         else -> "All"
                     },
                     onTabSelected = { selected ->
                         activeTab = when (selected) {
-                            "Local & downloaded" -> "Device Files"
+                            "Local" -> "Local Files"
+                            "Downloads" -> "Downloads"
                             "Cached" -> "Cached"
-                            "Imported" -> "Imported"
                             else -> ""
                         }
                     }
@@ -330,7 +330,15 @@ fun LibraryScreen(
                     "Albums" -> AlbumsTabContent(nestedScrollConnection)
                     "Artists" -> ArtistsTabContent(nestedScrollConnection)
                     "Recap" -> RecapTabContent(nestedScrollConnection, viewModel, onNavigateToExplore)
-                    "Device Files" -> {
+                    "Local Files", "Downloads" -> {
+                        // Local and Downloads are now separate library pages. Downloads only shows
+                        // files MOONWAVE saved under its own Download/Music folder; Local shows
+                        // the rest of the device's music so the same song never appears twice.
+                        val downloadsOnly = activeTab == "Downloads"
+                        val tabSongs = remember(localSongs, downloadsOnly) {
+                            localSongs.filter { isMoonwaveDownloadedSong(it) == downloadsOnly }
+                        }
+
                         // Scan Local Files helper
                         val onRefreshAction = {
                             scope.launch {
@@ -353,7 +361,9 @@ fun LibraryScreen(
                                 OutlinedTextField(
                                     value = searchQuery,
                                     onValueChange = { searchQuery = it },
-                                    placeholder = { Text("Search local songs...") },
+                                    placeholder = {
+                                        Text(if (downloadsOnly) "Search downloaded songs..." else "Search local songs...")
+                                    },
                                     leadingIcon = { Icon(Icons.Default.Search, null) },
                                     trailingIcon = {
                                         if (searchQuery.isNotEmpty()) {
@@ -407,8 +417,8 @@ fun LibraryScreen(
                                 Spacer(modifier = Modifier.height(6.dp))
 
                                 // Filter, Sort, and Group local songs
-                                val filteredSongs = remember(localSongs, searchQuery) {
-                                    localSongs.filter {
+                                val filteredSongs = remember(tabSongs, searchQuery) {
+                                    tabSongs.filter {
                                         it.title.contains(searchQuery, ignoreCase = true) || it.artist.contains(searchQuery, ignoreCase = true)
                                     }
                                 }
@@ -486,8 +496,14 @@ fun LibraryScreen(
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Text(
-                                            if (searchQuery.isNotEmpty()) "No matching songs found" else "Scan device files to load songs",
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            when {
+                                                searchQuery.isNotEmpty() -> "No matching songs found"
+                                                downloadsOnly -> "No downloads yet. Download a song from Explore to see it here."
+                                                else -> "Scan device files to load songs"
+                                            },
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            textAlign = TextAlign.Center,
+                                            modifier = Modifier.padding(horizontal = 24.dp)
                                         )
                                     }
                                 } else {
@@ -1006,15 +1022,7 @@ private fun UnifiedLibraryContent(
             .fillMaxSize()
             .nestedScroll(nestedScrollConnection)
     ) {
-        // Mochy Import banner
-        item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(2) }) {
-            com.moonwave.music.ui.component.MochyImportBanner(
-                onClick = { onCategoryClick("Imported") },
-                modifier = Modifier.padding(bottom = 4.dp)
-            )
-        }
-
-        // Mochy 2x2 Bento Category Cards
+        // Moonwave 2x2 Bento Category Cards
         item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(2) }) {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Row(
@@ -1022,7 +1030,7 @@ private fun UnifiedLibraryContent(
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     val songCovers = onlineSongs.take(2).map { it.thumbnailUrl }
-                    com.moonwave.music.ui.component.MochyLibraryCategoryCard(
+                    com.moonwave.music.ui.component.MoonwaveLibraryCategoryCard(
                         title = "Songs",
                         count = onlineSongs.size,
                         covers = songCovers,
@@ -1031,7 +1039,7 @@ private fun UnifiedLibraryContent(
                     )
 
                     val playlistCovers = onlinePlaylists.take(2).map { it.thumbnailUrl }
-                    com.moonwave.music.ui.component.MochyLibraryCategoryCard(
+                    com.moonwave.music.ui.component.MoonwaveLibraryCategoryCard(
                         title = "Playlists",
                         count = onlinePlaylists.size,
                         covers = playlistCovers,
@@ -1045,7 +1053,7 @@ private fun UnifiedLibraryContent(
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     val albumCovers = onlineAlbums.take(2).map { it.thumbnailUrl }
-                    com.moonwave.music.ui.component.MochyLibraryCategoryCard(
+                    com.moonwave.music.ui.component.MoonwaveLibraryCategoryCard(
                         title = "Albums",
                         count = onlineAlbums.size,
                         covers = albumCovers,
@@ -1054,7 +1062,7 @@ private fun UnifiedLibraryContent(
                     )
 
                     val artistCovers = onlineArtists.take(2).map { it.thumbnailUrl }
-                    com.moonwave.music.ui.component.MochyLibraryCategoryCard(
+                    com.moonwave.music.ui.component.MoonwaveLibraryCategoryCard(
                         title = "Artists",
                         count = onlineArtists.size,
                         covers = artistCovers,
@@ -1065,11 +1073,11 @@ private fun UnifiedLibraryContent(
                 }
 
                 val recentCovers = (onlineSongs.map { it.thumbnailUrl } + onlinePlaylists.map { it.thumbnailUrl }).filterNotNull().take(2)
-                com.moonwave.music.ui.component.MochyLibraryWideCard(
+                com.moonwave.music.ui.component.MoonwaveLibraryWideCard(
                     title = "Recently added",
                     count = onlineSongs.size + onlinePlaylists.size,
                     covers = recentCovers,
-                    onClick = { onCategoryClick("Device Files") },
+                    onClick = { onCategoryClick("Local Files") },
                     modifier = Modifier.fillMaxWidth()
                 )
             }
@@ -2222,7 +2230,7 @@ private fun RecapTabContent(
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            text = "A dynamic reflection of your musical journey on SpatialFlow.",
+                            text = "A dynamic reflection of your musical journey on Moonwave.",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -2614,6 +2622,15 @@ private fun RecapTabContent(
             }
         }
     }
+}
+
+/** True for tracks saved by MOONWAVE's downloader (legacy Download/Moonwave or Music/Moonwave). */
+private fun isMoonwaveDownloadedSong(song: SongItem): Boolean {
+    val rawPath = song.path ?: song.data ?: return false
+    val path = rawPath.replace('\\', '/').lowercase(java.util.Locale.ROOT)
+    return path.contains("/download/moonwave/") ||
+        path.contains("/downloads/moonwave/") ||
+        path.contains("/music/moonwave/")
 }
 
 // Background scanner helper

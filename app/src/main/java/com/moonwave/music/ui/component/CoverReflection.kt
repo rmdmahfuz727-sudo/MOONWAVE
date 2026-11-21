@@ -23,7 +23,7 @@ private const val ReflectionFadeEnd = 0.9f
 private const val MeshRows = 32
 
 /**
- * Apple Music / Mochy style glossy artwork reflection.
+ * MOONWAVE style glossy artwork reflection.
  * Draws an edge-to-edge mirror of the cover fading into the dark background beneath the player.
  */
 @Composable

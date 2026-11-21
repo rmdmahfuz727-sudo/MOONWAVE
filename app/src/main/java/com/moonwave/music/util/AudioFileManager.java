@@ -61,16 +61,16 @@ public class AudioFileManager {
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             // Android 10+ - Create temp file in cache for FFmpeg processing
-            File tempDir = new File(context.getCacheDir(), "SpatialFlow_output");
+            File tempDir = new File(context.getCacheDir(), "Moonwave_output");
             if (!tempDir.exists()) tempDir.mkdirs();
 
             File tempFile = new File(tempDir, cleanName);
             Log.d(TAG, "Temp output file for processing: " + tempFile.getAbsolutePath());
             return tempFile;
         } else {
-            // Android 9 and below - Direct file access to Downloads/SpatialFlow
+            // Android 9 and below - Direct file access to Downloads/Moonwave
             File downloadsDir = new File(Environment.getExternalStoragePublicDirectory(
-                    Environment.DIRECTORY_DOWNLOADS), "SpatialFlow");
+                    Environment.DIRECTORY_DOWNLOADS), "Moonwave");
             if (!downloadsDir.exists()) downloadsDir.mkdirs();
 
             File outputFile = new File(downloadsDir, cleanName);
@@ -130,9 +130,9 @@ public class AudioFileManager {
         }
         values.put(MediaStore.Audio.Media.MIME_TYPE, mimeType);
 
-        // Save under Music/SpatialFlow folder
+        // Save under Music/Moonwave folder
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            values.put(MediaStore.Audio.Media.RELATIVE_PATH, Environment.DIRECTORY_MUSIC + "/SpatialFlow");
+            values.put(MediaStore.Audio.Media.RELATIVE_PATH, Environment.DIRECTORY_MUSIC + "/Moonwave");
             values.put(MediaStore.Audio.Media.IS_PENDING, 1);
         }
 
@@ -165,7 +165,7 @@ public class AudioFileManager {
                 resolver.update(itemUri, values, null, null);
             }
 
-            Log.d(TAG, "File copied to MediaStore successfully: Music/SpatialFlow/" + sourceFile.getName());
+            Log.d(TAG, "File copied to MediaStore successfully: Music/Moonwave/" + sourceFile.getName());
 
         } catch (IOException e) {
             Log.e(TAG, "Error copying to MediaStore: " + e.getMessage(), e);

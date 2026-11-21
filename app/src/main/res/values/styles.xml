@@ -16,21 +16,21 @@
         <item name="android:fontVariationSettings">"'ROND' 100"</item>
         <item name="fontVariationSettings">"'ROND' 100"</item>
 
-        <item name="textAppearanceDisplayLarge">@style/TextAppearance.SpatialFlow.DisplayLarge</item>
-        <item name="textAppearanceDisplayMedium">@style/TextAppearance.SpatialFlow.DisplayMedium</item>
-        <item name="textAppearanceDisplaySmall">@style/TextAppearance.SpatialFlow.DisplaySmall</item>
-        <item name="textAppearanceHeadlineLarge">@style/TextAppearance.SpatialFlow.HeadlineLarge</item>
-        <item name="textAppearanceHeadlineMedium">@style/TextAppearance.SpatialFlow.HeadlineMedium</item>
-        <item name="textAppearanceHeadlineSmall">@style/TextAppearance.SpatialFlow.HeadlineSmall</item>
-        <item name="textAppearanceTitleLarge">@style/TextAppearance.SpatialFlow.TitleLarge</item>
-        <item name="textAppearanceTitleMedium">@style/TextAppearance.SpatialFlow.TitleMedium</item>
-        <item name="textAppearanceTitleSmall">@style/TextAppearance.SpatialFlow.TitleSmall</item>
-        <item name="textAppearanceBodyLarge">@style/TextAppearance.SpatialFlow.BodyLarge</item>
-        <item name="textAppearanceBodyMedium">@style/TextAppearance.SpatialFlow.BodyMedium</item>
-        <item name="textAppearanceBodySmall">@style/TextAppearance.SpatialFlow.BodySmall</item>
-        <item name="textAppearanceLabelLarge">@style/TextAppearance.SpatialFlow.LabelLarge</item>
-        <item name="textAppearanceLabelMedium">@style/TextAppearance.SpatialFlow.LabelMedium</item>
-        <item name="textAppearanceLabelSmall">@style/TextAppearance.SpatialFlow.LabelSmall</item>
+        <item name="textAppearanceDisplayLarge">@style/TextAppearance.Moonwave.DisplayLarge</item>
+        <item name="textAppearanceDisplayMedium">@style/TextAppearance.Moonwave.DisplayMedium</item>
+        <item name="textAppearanceDisplaySmall">@style/TextAppearance.Moonwave.DisplaySmall</item>
+        <item name="textAppearanceHeadlineLarge">@style/TextAppearance.Moonwave.HeadlineLarge</item>
+        <item name="textAppearanceHeadlineMedium">@style/TextAppearance.Moonwave.HeadlineMedium</item>
+        <item name="textAppearanceHeadlineSmall">@style/TextAppearance.Moonwave.HeadlineSmall</item>
+        <item name="textAppearanceTitleLarge">@style/TextAppearance.Moonwave.TitleLarge</item>
+        <item name="textAppearanceTitleMedium">@style/TextAppearance.Moonwave.TitleMedium</item>
+        <item name="textAppearanceTitleSmall">@style/TextAppearance.Moonwave.TitleSmall</item>
+        <item name="textAppearanceBodyLarge">@style/TextAppearance.Moonwave.BodyLarge</item>
+        <item name="textAppearanceBodyMedium">@style/TextAppearance.Moonwave.BodyMedium</item>
+        <item name="textAppearanceBodySmall">@style/TextAppearance.Moonwave.BodySmall</item>
+        <item name="textAppearanceLabelLarge">@style/TextAppearance.Moonwave.LabelLarge</item>
+        <item name="textAppearanceLabelMedium">@style/TextAppearance.Moonwave.LabelMedium</item>
+        <item name="textAppearanceLabelSmall">@style/TextAppearance.Moonwave.LabelSmall</item>
 
         <!-- System bars styling -->
         <item name="android:statusBarColor">@android:color/transparent</item>
@@ -63,7 +63,7 @@
             <item name="android:height">32dp</item>
         </style>
 
-    <style name="ShapeAppearance.SpatialFlow.ExtraLarge" parent="ShapeAppearance.Material3.Corner.Large">
+    <style name="ShapeAppearance.Moonwave.ExtraLarge" parent="ShapeAppearance.Material3.Corner.Large">
         <item name="cornerFamily">rounded</item>
         <item name="cornerSize">32dp</item>
     </style>
@@ -73,7 +73,7 @@
     <!-- ============================================ -->
 
     <!-- Display Styles - For large, impactful text -->
-    <style name="TextAppearance.SpatialFlow.DisplayLarge" parent="TextAppearance.Material3.DisplayLarge">
+    <style name="TextAppearance.Moonwave.DisplayLarge" parent="TextAppearance.Material3.DisplayLarge">
 
         <item name="android:textSize">57sp</item>
         <item name="android:letterSpacing">0</item>
@@ -81,26 +81,26 @@
         <item name="android:fontVariationSettings">"'wght' 400, 'ROND' 100"</item>
     </style>
 
-    <style name="TextAppearance.SpatialFlow.DisplayMedium" parent="TextAppearance.Material3.DisplayMedium">
+    <style name="TextAppearance.Moonwave.DisplayMedium" parent="TextAppearance.Material3.DisplayMedium">
 
         <item name="android:textSize">45sp</item>
         <item name="android:letterSpacing">-0.01</item>
     </style>
 
-    <style name="TextAppearance.SpatialFlow.DisplaySmall" parent="TextAppearance.Material3.DisplaySmall">
+    <style name="TextAppearance.Moonwave.DisplaySmall" parent="TextAppearance.Material3.DisplaySmall">
 
         <item name="android:textSize">36sp</item>
         <item name="android:letterSpacing">0</item>
     </style>
 
     <!-- Headline Styles - For section titles -->
-    <style name="TextAppearance.SpatialFlow.HeadlineLarge" parent="TextAppearance.Material3.HeadlineLarge">
+    <style name="TextAppearance.Moonwave.HeadlineLarge" parent="TextAppearance.Material3.HeadlineLarge">
 
         <item name="android:textSize">32sp</item>
         <item name="android:letterSpacing">0</item>
     </style>
 
-    <style name="TextAppearance.SpatialFlow.HeadlineMedium" parent="TextAppearance.Material3.HeadlineMedium">
+    <style name="TextAppearance.Moonwave.HeadlineMedium" parent="TextAppearance.Material3.HeadlineMedium">
 
         <item name="android:textSize">28sp</item>
         <item name="android:letterSpacing">0.018</item>
@@ -108,14 +108,14 @@
         <item name="android:fontVariationSettings">"'wght' 600, 'ROND' 100"</item>
     </style>
 
-    <style name="TextAppearance.SpatialFlow.HeadlineSmall" parent="TextAppearance.Material3.HeadlineSmall">
+    <style name="TextAppearance.Moonwave.HeadlineSmall" parent="TextAppearance.Material3.HeadlineSmall">
 
         <item name="android:textSize">24sp</item>
         <item name="android:letterSpacing">0</item>
     </style>
 
     <!-- Lyrics Style - For active song lyrics -->
-    <style name="TextAppearance.SpatialFlow.Lyrics" parent="TextAppearance.Material3.HeadlineMedium">
+    <style name="TextAppearance.Moonwave.Lyrics" parent="TextAppearance.Material3.HeadlineMedium">
         <item name="android:textSize">34sp</item>
         <item name="android:textStyle">bold</item>
         <item name="android:fontFamily">@font/google_flex</item>
@@ -125,7 +125,7 @@
     </style>
 
     <!-- Title Styles - For component headers -->
-    <style name="TextAppearance.SpatialFlow.TitleLarge" parent="TextAppearance.Material3.TitleLarge">
+    <style name="TextAppearance.Moonwave.TitleLarge" parent="TextAppearance.Material3.TitleLarge">
 
         <item name="android:textSize">22sp</item>
         <item name="android:letterSpacing">0.023</item>
@@ -133,20 +133,20 @@
         <item name="android:fontVariationSettings">"'wght' 700, 'ROND' 100"</item>
     </style>
 
-    <style name="TextAppearance.SpatialFlow.TitleMedium" parent="TextAppearance.Material3.TitleMedium">
+    <style name="TextAppearance.Moonwave.TitleMedium" parent="TextAppearance.Material3.TitleMedium">
 
         <item name="android:textSize">16sp</item>
         <item name="android:letterSpacing">0.01</item>
     </style>
 
-    <style name="TextAppearance.SpatialFlow.TitleSmall" parent="TextAppearance.Material3.TitleSmall">
+    <style name="TextAppearance.Moonwave.TitleSmall" parent="TextAppearance.Material3.TitleSmall">
 
         <item name="android:textSize">14sp</item>
         <item name="android:letterSpacing">0.01</item>
     </style>
 
     <!-- Body Styles - For main content text -->
-    <style name="TextAppearance.SpatialFlow.BodyLarge" parent="TextAppearance.Material3.BodyLarge">
+    <style name="TextAppearance.Moonwave.BodyLarge" parent="TextAppearance.Material3.BodyLarge">
 
         <item name="android:textSize">16sp</item>
         <item name="android:letterSpacing">0.05</item>
@@ -154,7 +154,7 @@
         <item name="android:fontVariationSettings">"'wght' 400, 'ROND' 100"</item>
     </style>
 
-    <style name="TextAppearance.SpatialFlow.BodyMedium" parent="TextAppearance.Material3.BodyMedium">
+    <style name="TextAppearance.Moonwave.BodyMedium" parent="TextAppearance.Material3.BodyMedium">
 
         <item name="android:textSize">14sp</item>
         <item name="android:letterSpacing">0.036</item>
@@ -162,14 +162,14 @@
         <item name="android:fontVariationSettings">"'wght' 400, 'ROND' 100"</item>
     </style>
 
-    <style name="TextAppearance.SpatialFlow.BodySmall" parent="TextAppearance.Material3.BodySmall">
+    <style name="TextAppearance.Moonwave.BodySmall" parent="TextAppearance.Material3.BodySmall">
 
         <item name="android:textSize">12sp</item>
         <item name="android:letterSpacing">0.03</item>
     </style>
 
     <!-- Label Styles - For buttons, chips, and small labels -->
-    <style name="TextAppearance.SpatialFlow.LabelLarge" parent="TextAppearance.Material3.LabelLarge">
+    <style name="TextAppearance.Moonwave.LabelLarge" parent="TextAppearance.Material3.LabelLarge">
 
         <item name="android:textSize">14sp</item>
         <item name="android:letterSpacing">0.007</item>
@@ -177,13 +177,13 @@
         <item name="android:fontVariationSettings">"'wght' 500, 'ROND' 100"</item>
     </style>
 
-    <style name="TextAppearance.SpatialFlow.LabelMedium" parent="TextAppearance.Material3.LabelMedium">
+    <style name="TextAppearance.Moonwave.LabelMedium" parent="TextAppearance.Material3.LabelMedium">
 
         <item name="android:textSize">12sp</item>
         <item name="android:letterSpacing">0.04</item>
     </style>
 
-    <style name="TextAppearance.SpatialFlow.LabelSmall" parent="TextAppearance.Material3.LabelSmall">
+    <style name="TextAppearance.Moonwave.LabelSmall" parent="TextAppearance.Material3.LabelSmall">
 
         <item name="android:textSize">11sp</item>
         <item name="android:letterSpacing">0.045</item>

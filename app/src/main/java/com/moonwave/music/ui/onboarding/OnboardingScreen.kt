@@ -317,7 +317,13 @@ package com.moonwave.music.ui.onboarding
                         painter = painterResource(id = drawableRes),
                         contentDescription = "Background decoration",
                         contentScale = ContentScale.Fit,
-                        colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(iconTint),
+                        colorFilter = if (iconTint == androidx.compose.ui.graphics.Color.Unspecified ||
+                            drawableRes == R.drawable.ic_applogo
+                        ) {
+                            null
+                        } else {
+                            androidx.compose.ui.graphics.ColorFilter.tint(iconTint)
+                        },
                         modifier = Modifier
                             .fillMaxSize()
                             .clip(RoundedCornerShape(20.dp))
@@ -346,7 +352,7 @@ package com.moonwave.music.ui.onboarding
         ImmersivePageLayout(
             pageOffsetProvider = pageOffsetProvider,
             drawableRes = R.drawable.ic_applogo,
-            iconTint = MaterialTheme.colorScheme.onSurface
+            iconTint = androidx.compose.ui.graphics.Color.Unspecified
         ) {
             Text(
                 text = "Welcome\nto MOONWAVE.",

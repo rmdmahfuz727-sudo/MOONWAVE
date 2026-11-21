@@ -8,12 +8,25 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
@@ -52,9 +65,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
@@ -68,14 +84,17 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.moonwave.music.MainActivity
 import com.moonwave.music.R
 import com.moonwave.music.data.lyrics.LyricLine
 import com.moonwave.music.data.lyrics.LyricsResult
 import com.moonwave.music.model.SongItem
+import com.moonwave.music.ui.component.AppearancePrefs
 import com.moonwave.music.ui.component.CoverReflection
 import com.moonwave.music.ui.component.press3D
+import com.moonwave.music.ui.theme.observeKey
 import com.moonwave.music.viewmodel.PlayerSharedViewModel
 
 /**
@@ -255,9 +274,17 @@ fun FullPlayer(
         }
     }
 
-    val backgroundBrush = remember(uiState.playerBackgroundColor, isDark) {
+    val appearanceContext = LocalContext.current
+    val appearancePrefs = remember(appearanceContext) {
+        appearanceContext.getSharedPreferences(AppearancePrefs.PREFS, Context.MODE_PRIVATE)
+    }
+    val playerTheme by appearancePrefs.observeKey(AppearancePrefs.PLAYER_THEME, AppearancePrefs.PLAYER_FLUID)
+    val lyricsFilmGrain by appearancePrefs.observeKey(AppearancePrefs.LYRICS_FILM_GRAIN, true)
+    val artworkGradientBlur by appearancePrefs.observeKey(AppearancePrefs.PLAYER_GRADIENT_BLUR, true)
+
+    val targetBaseSurfaceColor = remember(uiState.playerBackgroundColor, isDark) {
         val playerColor = Color(uiState.playerBackgroundColor)
-        val finalColor = deriveArtworkSurfaceColor(
+        deriveArtworkSurfaceColor(
             sourceColor = playerColor,
             isDark = isDark,
             darkLightness = 0.155f,
@@ -265,7 +292,28 @@ fun FullPlayer(
             darkSaturationRange = 0.32f..0.54f,
             lightSaturationRange = 0.30f..0.48f
         )
-        androidx.compose.ui.graphics.SolidColor(finalColor)
+    }
+    // Animate the artwork-harmonised surface so switching songs blends colours instead of
+    // flashing to the new palette in a single frame.
+    val baseSurfaceColor by animateColorAsState(
+        targetValue = targetBaseSurfaceColor,
+        animationSpec = tween(durationMillis = 700, easing = FastOutSlowInEasing),
+        label = "PlayerSurfaceColor"
+    )
+
+    val backgroundBrush: Brush = remember(baseSurfaceColor, playerTheme) {
+        if (playerTheme == AppearancePrefs.PLAYER_FLUID) {
+            Brush.linearGradient(
+                colors = listOf(
+                    lerp(baseSurfaceColor, Color.White, if (isDark) 0.10f else 0.16f),
+                    baseSurfaceColor,
+                    lerp(baseSurfaceColor, Color.Black, if (isDark) 0.20f else 0.10f),
+                    baseSurfaceColor
+                )
+            )
+        } else {
+            androidx.compose.ui.graphics.SolidColor(baseSurfaceColor)
+        }
     }
 
     val haptic = LocalHapticFeedback.current
@@ -294,9 +342,9 @@ fun FullPlayer(
     val sleepTimerMode by viewModel.sleepTimerMode.collectAsStateWithLifecycle()
     val sleepTimerEndTime by viewModel.sleepTimerEndTime.collectAsStateWithLifecycle()
     
-    val lyricsBackgroundBrush = remember(uiState.playerBackgroundColor, isDark) {
+    val targetLyricsColor = remember(uiState.playerBackgroundColor, isDark) {
         val playerColor = Color(uiState.playerBackgroundColor)
-        val finalColor = deriveArtworkSurfaceColor(
+        deriveArtworkSurfaceColor(
             sourceColor = playerColor,
             isDark = isDark,
             darkLightness = 0.145f,
@@ -304,7 +352,14 @@ fun FullPlayer(
             darkSaturationRange = 0.32f..0.54f,
             lightSaturationRange = 0.30f..0.48f
         )
-        androidx.compose.ui.graphics.SolidColor(finalColor)
+    }
+    val lyricsColor by animateColorAsState(
+        targetValue = targetLyricsColor,
+        animationSpec = tween(durationMillis = 700, easing = FastOutSlowInEasing),
+        label = "LyricsSurfaceColor"
+    )
+    val lyricsBackgroundBrush = remember(lyricsColor) {
+        androidx.compose.ui.graphics.SolidColor(lyricsColor)
     }
 
     // Trigger lyrics load when enabled
@@ -326,6 +381,24 @@ fun FullPlayer(
             .background(backgroundBrush)
             .then(if (isQueueExpanded || isLyricsModeEnabled) Modifier else dragModifier) // Drag down anywhere to collapse
     ) {
+        if (playerTheme == AppearancePrefs.PLAYER_FLUID) {
+            FluidPlayerBackground(
+                baseColor = baseSurfaceColor,
+                isDark = isDark,
+                modifier = Modifier.fillMaxSize()
+            )
+        }
+
+        if (artworkGradientBlur) {
+            ArtworkGradientBlur(
+                artworkColor = Color(uiState.playerBackgroundColor),
+                accentColor = dynamicAccentColor,
+                surfaceColor = baseSurfaceColor,
+                isDark = isDark,
+                modifier = Modifier.fillMaxSize()
+            )
+        }
+
         val configuration = LocalConfiguration.current
         val screenWidth = configuration.screenWidthDp.dp
         val screenHeight = configuration.screenHeightDp.dp
@@ -401,45 +474,57 @@ fun FullPlayer(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Metadata row: title/artist
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 4.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(
-                    modifier = Modifier.weight(1f)
+            // Metadata row: title/artist. Crossfading on song id keeps track changes smooth.
+            AnimatedContent(
+                targetState = uiState.currentSong?.id,
+                transitionSpec = {
+                    (fadeIn(tween(280)) + slideInVertically { it / 8 }) togetherWith
+                        (fadeOut(tween(170)) + slideOutVertically { -it / 10 })
+                },
+                label = "PlayerMetadata"
+            ) { _ ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = uiState.currentSong?.title ?: "Unknown Title",
-                        style = MaterialTheme.typography.headlineMediumEmphasized,
-                        fontWeight = FontWeight.Bold,
-                        color = contentColor,
-                        maxLines = 1,
-                        modifier = Modifier.basicMarqueeWithFadedEdges()
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = uiState.currentSong?.artist ?: "Unknown Artist",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = contentSecondary,
-                        maxLines = 1,
-                        modifier = Modifier
-                            .basicMarqueeWithFadedEdges()
-                            .clickable {
-                                val song = uiState.currentSong
-                                if (song != null) {
-                                    onArtistClick(song.artistId, song.artist)
+                    Column(
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(
+                            text = uiState.currentSong?.title ?: "Unknown Title",
+                            style = MaterialTheme.typography.headlineMedium.copy(
+                                fontSize = 28.sp,
+                                fontWeight = FontWeight.Bold
+                            ),
+                            color = contentColor,
+                            maxLines = 1,
+                            modifier = Modifier.basicMarqueeWithFadedEdges()
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = uiState.currentSong?.artist ?: "Unknown Artist",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Medium,
+                            color = contentSecondary,
+                            maxLines = 1,
+                            modifier = Modifier
+                                .basicMarqueeWithFadedEdges()
+                                .clickable {
+                                    val song = uiState.currentSong
+                                    if (song != null) {
+                                        onArtistClick(song.artistId, song.artist)
+                                    }
                                 }
-                            }
-                    )
+                        )
+                    }
                 }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Premium YT Music style horizontal control chips row
+            // MOONWAVE-style horizontal control chips row
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -530,7 +615,7 @@ fun FullPlayer(
                 val realDownloaded = uiState.isCurrentSongDownloaded
                 val realDownloadProgress = uiState.currentSongDownloadProgress
                 val isDownloading = realDownloadProgress != null
-                
+
                 val downloadLabel = when {
                     realDownloaded -> "Downloaded"
                     isDownloading -> "Downloading ${realDownloadProgress}%"
@@ -570,7 +655,8 @@ fun FullPlayer(
                 dynamicAccentColor = dynamicAccentColor,
                 contentColor = contentColor,
                 contentSecondary = contentSecondary,
-                isDark = isDark
+                isDark = isDark,
+                audioCodec = uiState.audioCodec
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -759,6 +845,7 @@ fun FullPlayer(
                 currentPositionProvider = currentPositionProvider,
                 contentReady = lyricsContentReady,
                 backgroundBrush = lyricsBackgroundBrush,
+                filmGrain = lyricsFilmGrain,
                 revealProgressProvider = { lyricsRevealProgress },
                 revealCenterProvider = { lyricsButtonCenterInRoot },
                 contentColor = contentColor,
@@ -811,5 +898,157 @@ fun FullPlayer(
                 }
             )
         }
+    }
+}
+
+/**
+ * Slowly drifting mesh of soft radial lights that gives the Fluid player theme its organic,
+ * MOONWAVE-like motion. Static theme skips this composable entirely.
+ */
+@Composable
+private fun FluidPlayerBackground(
+    baseColor: Color,
+    isDark: Boolean,
+    modifier: Modifier = Modifier
+) {
+    val transition = rememberInfiniteTransition(label = "FluidPlayerBackground")
+    val driftA by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 16000, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "FluidDriftA"
+    )
+    val driftB by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 23000, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "FluidDriftB"
+    )
+
+    val highlight = lerp(baseColor, Color.White, if (isDark) 0.16f else 0.30f)
+    val accent = lerp(baseColor, Color(0xFF8B5CF6), if (isDark) 0.32f else 0.22f)
+    val shade = lerp(baseColor, Color.Black, if (isDark) 0.22f else 0.12f)
+
+    Canvas(modifier = modifier) {
+        drawRect(
+            brush = Brush.radialGradient(
+                colors = listOf(highlight.copy(alpha = if (isDark) 0.30f else 0.55f), Color.Transparent),
+                center = Offset(
+                    x = size.width * (0.12f + 0.42f * driftA),
+                    y = size.height * (0.12f + 0.20f * driftB)
+                ),
+                radius = size.maxDimension * 0.62f
+            )
+        )
+        drawRect(
+            brush = Brush.radialGradient(
+                colors = listOf(accent.copy(alpha = if (isDark) 0.28f else 0.34f), Color.Transparent),
+                center = Offset(
+                    x = size.width * (0.82f - 0.30f * driftB),
+                    y = size.height * (0.68f + 0.16f * driftA)
+                ),
+                radius = size.maxDimension * 0.55f
+            )
+        )
+        drawRect(
+            brush = Brush.radialGradient(
+                colors = listOf(shade.copy(alpha = if (isDark) 0.40f else 0.16f), Color.Transparent),
+                center = Offset(
+                    x = size.width * (0.42f + 0.18f * driftB),
+                    y = size.height * (0.94f - 0.12f * driftA)
+                ),
+                radius = size.maxDimension * 0.50f
+            )
+        )
+    }
+}
+
+/**
+ * Optional artwork-following gradient glow. The three lights are seeded from the current
+ * artwork's dominant color and accent, so every song gets its own soft, drifting haze.
+ */
+@Composable
+private fun ArtworkGradientBlur(
+    artworkColor: Color,
+    accentColor: Color,
+    surfaceColor: Color,
+    isDark: Boolean,
+    modifier: Modifier = Modifier
+) {
+    val animatedArtwork by animateColorAsState(
+        targetValue = artworkColor,
+        animationSpec = tween(durationMillis = 700, easing = FastOutSlowInEasing),
+        label = "GradientArtworkColor"
+    )
+    val animatedAccent by animateColorAsState(
+        targetValue = accentColor,
+        animationSpec = tween(durationMillis = 700, easing = FastOutSlowInEasing),
+        label = "GradientAccentColor"
+    )
+    val transition = rememberInfiniteTransition(label = "ArtworkGradientBlur")
+    val driftA by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 14000, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "GradientDriftA"
+    )
+    val driftB by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 19000, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "GradientDriftB"
+    )
+
+    val primary = lerp(animatedArtwork, Color.White, if (isDark) 0.10f else 0.26f)
+    val secondary = animatedAccent
+    val tertiary = lerp(surfaceColor, animatedArtwork, 0.55f)
+
+    Canvas(
+        modifier = modifier
+            .blur(48.dp)
+            .graphicsLayer { alpha = if (isDark) 0.58f else 0.44f }
+    ) {
+        drawRect(
+            brush = Brush.radialGradient(
+                colors = listOf(primary.copy(alpha = 0.90f), Color.Transparent),
+                center = Offset(
+                    x = size.width * (0.18f + 0.30f * driftA),
+                    y = size.height * (0.16f + 0.14f * driftB)
+                ),
+                radius = size.maxDimension * 0.60f
+            )
+        )
+        drawRect(
+            brush = Brush.radialGradient(
+                colors = listOf(secondary.copy(alpha = 0.78f), Color.Transparent),
+                center = Offset(
+                    x = size.width * (0.86f - 0.26f * driftB),
+                    y = size.height * (0.58f + 0.20f * driftA)
+                ),
+                radius = size.maxDimension * 0.56f
+            )
+        )
+        drawRect(
+            brush = Brush.radialGradient(
+                colors = listOf(tertiary.copy(alpha = 0.72f), Color.Transparent),
+                center = Offset(
+                    x = size.width * (0.38f + 0.22f * driftB),
+                    y = size.height * (0.90f - 0.16f * driftA)
+                ),
+                radius = size.maxDimension * 0.52f
+            )
+        )
     }
 }

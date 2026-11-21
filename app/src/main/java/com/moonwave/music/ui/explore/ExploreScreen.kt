@@ -73,6 +73,7 @@ import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.compositionLocalOf
@@ -87,6 +88,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -113,6 +115,15 @@ import com.moonwave.music.data.innertube.SearchFilter
 import com.moonwave.music.data.innertube.SearchItem
 import com.moonwave.music.data.innertube.UserProfile
 import com.moonwave.music.model.SongItem
+import com.moonwave.music.ui.component.AnimatedHomeAura
+import com.moonwave.music.ui.component.HeroCardKind
+import com.moonwave.music.ui.component.HeroPick
+import com.moonwave.music.ui.component.MoonwaveHeroCarousel
+import com.moonwave.music.ui.component.MoonwaveHistorySection
+import com.moonwave.music.ui.component.MoonwavePlaylistFeatureCard
+import com.moonwave.music.ui.component.MoonwaveRankedSongSection
+import com.moonwave.music.ui.component.enterStaggered
+import com.moonwave.music.ui.component.homeScrollParallax
 import com.moonwave.music.viewmodel.AccountViewModel
 import com.moonwave.music.viewmodel.ExploreViewModel
 import com.moonwave.music.viewmodel.PlayerSharedViewModel
@@ -406,6 +417,37 @@ fun ExploreScreen(
         label = "GradientFadeIn"
     )
 
+    // Snapshot-aware reader used by the hero cards' parallax. Off-screen lists report a large
+    // value so the hero stays hidden while another tab is displayed.
+    val homeHeroScroll: () -> Float = {
+        if (currentScreen == "home" && homeListState.firstVisibleItemIndex == 0) {
+            homeListState.firstVisibleItemScrollOffset.toFloat()
+        } else 1000f
+    }
+
+    // Fades a frosted wash behind the top search header once the feed is scrolled under it.
+    val topScrollOffset by remember {
+        derivedStateOf {
+            when {
+                isSearchActive || searchQuery.isNotBlank() || searchResults.isNotEmpty() -> {
+                    if (searchListState.firstVisibleItemIndex == 0) {
+                        searchListState.firstVisibleItemScrollOffset
+                    } else 2000
+                }
+                else -> {
+                    if (homeListState.firstVisibleItemIndex == 0) {
+                        homeListState.firstVisibleItemScrollOffset
+                    } else 2000
+                }
+            }
+        }
+    }
+    val topBlurAlpha by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = if (topScrollOffset > 8f) 1f else 0f,
+        animationSpec = androidx.compose.animation.core.tween(durationMillis = 240),
+        label = "TopScrollBlur"
+    )
+
     Box(modifier = Modifier.fillMaxSize().background(backgroundColor)) {
         Box(
             modifier = Modifier
@@ -436,7 +478,41 @@ fun ExploreScreen(
                         )
                     )
                 )
-        )
+        ) {
+            if (currentScreen == "home" && homeSections.isNotEmpty()) {
+                AnimatedHomeAura(
+                    modifier = Modifier.matchParentSize(),
+                    colors = listOf(
+                        MaterialTheme.colorScheme.primary,
+                        MaterialTheme.colorScheme.tertiary,
+                        MaterialTheme.colorScheme.secondary
+                    )
+                )
+            }
+        }
+
+        // Scroll-triggered frosted top bar: the wash and its soft edges fade in as content
+        // passes beneath the search header, then dissolve again at the very top of the feed.
+        if (topBlurAlpha > 0.001f) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .fillMaxWidth()
+                    .height(156.dp)
+                    .graphicsLayer { alpha = topBlurAlpha }
+                    .blur(18.dp)
+                    .background(
+                        brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                            colors = listOf(
+                                backgroundColor.copy(alpha = 0.96f),
+                                backgroundColor.copy(alpha = 0.82f),
+                                backgroundColor.copy(alpha = 0.38f),
+                                Color.Transparent
+                            )
+                        )
+                    )
+            )
+        }
 
         Column(
             modifier = Modifier
@@ -881,45 +957,160 @@ fun ExploreScreen(
                                                                                 ) else Modifier.fillMaxWidth()
                                                                             ) {
                                                                                 Column {
-                                                                                    WelcomeGreetingBanner(
-                                                                                        userName = userProfile?.name
-                                                                                    )
                                                                                     val allHomeSongs = remember(homeSections, accountHistory) {
                                                                                         val sectionSongs = homeSections.flatMap { it.items.filterIsInstance<SearchItem.Song>().map { s -> s.song } }
-                                                                                        if (sectionSongs.isNotEmpty()) sectionSongs else accountHistory
+                                                                                        (sectionSongs + accountHistory).distinctBy { it.videoId }
                                                                                     }
-                                                                                    if (allHomeSongs.isNotEmpty()) {
-                                                                                        com.moonwave.music.ui.component.MochyGachaCard(
-                                                                                            pool = allHomeSongs,
-                                                                                            onPlaySong = { randomSong ->
-                                                                                                val idx = allHomeSongs.indexOf(randomSong).coerceAtLeast(0)
-                                                                                                viewModel.playOnlineSongWithQueue(randomSong, allHomeSongs, idx)
+                                                                                    val playFromHome: (OnlineSong, List<OnlineSong>) -> Unit = { song, queue ->
+                                                                                        val idx = queue.indexOfFirst { it.videoId == song.videoId }.coerceAtLeast(0)
+                                                                                        viewModel.playOnlineSongWithQueue(song, queue, idx)
+                                                                                    }
+
+                                                                                    // Reference-style auto-advancing hero: Continue / Gacha / On repeat / Discover.
+                                                                                    val heroPicks = remember(allHomeSongs, accountHistory) {
+                                                                                        buildList {
+                                                                                            accountHistory.firstOrNull()?.let {
+                                                                                                add(
+                                                                                                    HeroPick(
+                                                                                                        kind = HeroCardKind.CONTINUE,
+                                                                                                        label = "Continue",
+                                                                                                        title = it.title,
+                                                                                                        subtitle = it.artist,
+                                                                                                        thumbnailUrl = it.thumbnailUrl,
+                                                                                                        song = it
+                                                                                                    )
+                                                                                                )
                                                                                             }
+                                                                                            if (allHomeSongs.size >= 5) {
+                                                                                                add(
+                                                                                                    HeroPick(
+                                                                                                        kind = HeroCardKind.GACHA,
+                                                                                                        label = "Gacha here!",
+                                                                                                        title = "Random plays"
+                                                                                                    )
+                                                                                                )
+                                                                                            }
+                                                                                            accountHistory.getOrNull(1)?.let {
+                                                                                                add(
+                                                                                                    HeroPick(
+                                                                                                        kind = HeroCardKind.ON_REPEAT,
+                                                                                                        label = "On repeat",
+                                                                                                        title = it.title,
+                                                                                                        subtitle = it.artist,
+                                                                                                        thumbnailUrl = it.thumbnailUrl,
+                                                                                                        song = it
+                                                                                                    )
+                                                                                                )
+                                                                                            }
+                                                                                            allHomeSongs.take(8).drop(2).take(4).forEachIndexed { index, song ->
+                                                                                                add(
+                                                                                                    HeroPick(
+                                                                                                        kind = HeroCardKind.DISCOVER,
+                                                                                                        label = if (index % 2 == 0) "Because you like" else "Suggested for you",
+                                                                                                        title = song.title,
+                                                                                                        subtitle = song.artist,
+                                                                                                        thumbnailUrl = song.thumbnailUrl,
+                                                                                                        song = song
+                                                                                                    )
+                                                                                                )
+                                                                                            }
+                                                                                        }
+                                                                                    }
+                                                                                    if (heroPicks.isNotEmpty()) {
+                                                                                        MoonwaveHeroCarousel(
+                                                                                            picks = heroPicks,
+                                                                                            onPick = { pick ->
+                                                                                                if (pick.kind == HeroCardKind.GACHA) {
+                                                                                                    val randomSong = allHomeSongs.randomOrNull()
+                                                                                                    if (randomSong != null) playFromHome(randomSong, allHomeSongs)
+                                                                                                } else if (pick.song != null) {
+                                                                                                    playFromHome(pick.song, allHomeSongs)
+                                                                                                }
+                                                                                            },
+                                                                                            scrollProvider = homeHeroScroll,
+                                                                                            modifier = Modifier.enterStaggered(0)
                                                                                         )
                                                                                     }
                                                                                     if (accountHistory.isNotEmpty()) {
-                                                                                        com.moonwave.music.ui.component.MochyRecentlyPlayedRow(
+                                                                                        com.moonwave.music.ui.component.MoonwaveRecentlyPlayedRow(
                                                                                             recentSongs = accountHistory.take(15),
                                                                                             onSongClick = { song ->
-                                                                                                val idx = accountHistory.indexOf(song).coerceAtLeast(0)
-                                                                                                viewModel.playOnlineSongWithQueue(song, accountHistory, idx)
+                                                                                                playFromHome(song, accountHistory)
                                                                                             },
                                                                                             onLikedClick = {
                                                                                                 viewModel.loadPlaylist("LM")
                                                                                             },
                                                                                             onHeaderClick = {
                                                                                                 isAccountVisible = true
-                                                                                            }
+                                                                                            },
+                                                                                            modifier = Modifier.enterStaggered(2)
+                                                                                        )
+                                                                                    }
+
+                                                                                    // Reference home extras: ranked list, playlist card and history.
+                                                                                    val existingTitles = homeSections.map { it.title.lowercase() }
+                                                                                    val rankedSongs = (accountHistory + allHomeSongs)
+                                                                                        .distinctBy { it.videoId }
+                                                                                        .take(6)
+                                                                                    if (rankedSongs.size >= 3 &&
+                                                                                        existingTitles.none { it.contains("most played") }
+                                                                                    ) {
+                                                                                        MoonwaveRankedSongSection(
+                                                                                            songs = rankedSongs,
+                                                                                            onSongClick = { playFromHome(it, rankedSongs) },
+                                                                                            modifier = Modifier.enterStaggered(3)
+                                                                                        )
+                                                                                    }
+
+                                                                                    val playlistSection = homeSections.firstOrNull {
+                                                                                        it.title.contains("playlist", ignoreCase = true)
+                                                                                    }
+                                                                                    val playlistSong = playlistSection?.items
+                                                                                        ?.filterIsInstance<SearchItem.Song>()
+                                                                                        ?.firstOrNull()
+                                                                                    if (playlistSong != null) {
+                                                                                        MoonwavePlaylistFeatureCard(
+                                                                                            title = playlistSection.title,
+                                                                                            subtitle = "From your playlists",
+                                                                                            coverUrls = playlistSection.items.take(3).map {
+                                                                                                when (it) {
+                                                                                                    is SearchItem.Song -> it.song.thumbnailUrl
+                                                                                                    is SearchItem.Album -> it.album.thumbnailUrl
+                                                                                                    is SearchItem.Playlist -> it.playlist.thumbnailUrl
+                                                                                                    else -> null
+                                                                                                }
+                                                                                            },
+                                                                                            onPlay = { playFromHome(playlistSong.song, playlistSection.items.filterIsInstance<SearchItem.Song>().map { it.song }) },
+                                                                                            modifier = Modifier.enterStaggered(4)
+                                                                                        )
+                                                                                    }
+
+                                                                                    val historySongs = (accountHistory.drop(2) + allHomeSongs)
+                                                                                        .distinctBy { it.videoId }
+                                                                                        .take(5)
+                                                                                    if (historySongs.isNotEmpty() &&
+                                                                                        existingTitles.none { it.contains("history") }
+                                                                                    ) {
+                                                                                        MoonwaveHistorySection(
+                                                                                            songs = historySongs,
+                                                                                            onSongClick = { playFromHome(it, historySongs) },
+                                                                                            onHeaderClick = { isAccountVisible = true },
+                                                                                            modifier = Modifier.enterStaggered(5)
                                                                                         )
                                                                                     }
                                                                                 }
                                                                             }
                                                                         }
                                                                     }
-                                                                    items(
+                                                                    itemsIndexed(
                                                                         items = homeSections,
-                                                                        key = { section -> "section-${section.title}" }
-                                                                    ) { section ->
+                                                                        key = { index, section -> "$index-section-${section.title}" }
+                                                                    ) { sectionIndex, section ->
+                                                                        Box(
+                                                                            modifier = Modifier
+                                                                                .fillMaxWidth()
+                                                                                .enterStaggered(3 + sectionIndex % 4)
+                                                                        ) {
                                                                         HomeSectionRow(
                                                                             section = section,
                                                                             currentOnlineSong = currentOnlineSong,
@@ -976,6 +1167,7 @@ fun ExploreScreen(
                                                                                 )
                                                                             }
                                                                         )
+                                                                        }
                                                                     }
                                                                     item {
                                                                         val isLoadingMore by viewModel.isLoadingMoreHome.collectAsStateWithLifecycle()
@@ -1256,7 +1448,7 @@ fun ExploreScreen(
 
                             CreditsTextSection(
                                 title = "Produced by",
-                                content = listOf(if (contributors.size > 1) contributors.last() else "SpatialFlow Engine")
+                                content = listOf(if (contributors.size > 1) contributors.last() else "Moonwave Engine")
                             )
 
                             CreditsTextSection(
@@ -1326,7 +1518,7 @@ fun ExploreScreen(
 
                             CreditsTextSection(
                                 title = "Produced by",
-                                content = listOf(if (contributors.size > 1) contributors.last() else "SpatialFlow Engine")
+                                content = listOf(if (contributors.size > 1) contributors.last() else "Moonwave Engine")
                             )
 
                             CreditsTextSection(
@@ -1603,7 +1795,7 @@ fun ExploreScreen(
                                     }
                                 }
                                 item {
-                                    com.moonwave.music.ui.component.MochyForYouSection(
+                                    com.moonwave.music.ui.component.MoonwaveForYouSection(
                                         onCategoryClick = { category ->
                                             onSearchActiveChange(false)
                                             onSearch(category)
@@ -1611,7 +1803,7 @@ fun ExploreScreen(
                                     )
                                 }
                                 item {
-                                    com.moonwave.music.ui.component.MochyMoodsAndMomentsSection(
+                                    com.moonwave.music.ui.component.MoonwaveMoodsAndMomentsSection(
                                         onMoodClick = { mood ->
                                             onSearchActiveChange(false)
                                             onSearch(mood)

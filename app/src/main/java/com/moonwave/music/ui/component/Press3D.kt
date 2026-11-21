@@ -27,7 +27,7 @@ private val TiltSpring = spring<Float>(
 )
 
 /**
- * 3D tactile press-in and tilt modifier inspired by Mochy Music.
+ * 3D tactile press-in and tilt modifier inspired by Moonwave Music.
  * When touched, the card/button dips along the axis of touch and compresses with spring physics.
  */
 fun Modifier.press3D(

@@ -45,33 +45,33 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 
-data class MochyCategory(
+data class MoonwaveCategory(
     val title: String,
     val color: Color,
     val backCoverUrl: String? = null,
     val frontCoverUrl: String? = null
 )
 
-val DefaultMochyCategories = listOf(
-    MochyCategory("Workout", Color(0xFFE67E22), "https://img.youtube.com/vi/kJQP7kiw5Fk/hqdefault.jpg", "https://img.youtube.com/vi/OPf0YbXqDm0/hqdefault.jpg"),
-    MochyCategory("1990s", Color(0xFF8E44AD), "https://img.youtube.com/vi/fJ9rUzIMcZQ/hqdefault.jpg", "https://img.youtube.com/vi/4fndeDfaWCg/hqdefault.jpg"),
-    MochyCategory("Korean hip-hop", Color(0xFFE74C3C), "https://img.youtube.com/vi/9bZkp7q19f0/hqdefault.jpg", "https://img.youtube.com/vi/2S24h707N3s/hqdefault.jpg"),
-    MochyCategory("Reggae & caribbean", Color(0xFF16A085), "https://img.youtube.com/vi/6ZfuNTqbHE8/hqdefault.jpg", "https://img.youtube.com/vi/kffacxfA7G4/hqdefault.jpg"),
-    MochyCategory("Feel good", Color(0xFFF39C12), "https://img.youtube.com/vi/ZbZSe6N_BXs/hqdefault.jpg", "https://img.youtube.com/vi/09R8_2nJtjg/hqdefault.jpg"),
-    MochyCategory("Rock", Color(0xFF34495E), "https://img.youtube.com/vi/kXYiU_JCYtU/hqdefault.jpg", "https://img.youtube.com/vi/hTWKbfoikeg/hqdefault.jpg"),
-    MochyCategory("Pop", Color(0xFFE91E63), "https://img.youtube.com/vi/fRh_vgS2dFE/hqdefault.jpg", "https://img.youtube.com/vi/JGwWNGJdvx8/hqdefault.jpg"),
-    MochyCategory("Chill", Color(0xFF27AE60), "https://img.youtube.com/vi/5qap5aO4i9A/hqdefault.jpg", "https://img.youtube.com/vi/RgKAFK5djSk/hqdefault.jpg")
+val DefaultMoonwaveCategories = listOf(
+    MoonwaveCategory("Workout", Color(0xFFE67E22), "https://img.youtube.com/vi/kJQP7kiw5Fk/hqdefault.jpg", "https://img.youtube.com/vi/OPf0YbXqDm0/hqdefault.jpg"),
+    MoonwaveCategory("1990s", Color(0xFF8E44AD), "https://img.youtube.com/vi/fJ9rUzIMcZQ/hqdefault.jpg", "https://img.youtube.com/vi/4fndeDfaWCg/hqdefault.jpg"),
+    MoonwaveCategory("Korean hip-hop", Color(0xFFE74C3C), "https://img.youtube.com/vi/9bZkp7q19f0/hqdefault.jpg", "https://img.youtube.com/vi/2S24h707N3s/hqdefault.jpg"),
+    MoonwaveCategory("Reggae & caribbean", Color(0xFF16A085), "https://img.youtube.com/vi/6ZfuNTqbHE8/hqdefault.jpg", "https://img.youtube.com/vi/kffacxfA7G4/hqdefault.jpg"),
+    MoonwaveCategory("Feel good", Color(0xFFF39C12), "https://img.youtube.com/vi/ZbZSe6N_BXs/hqdefault.jpg", "https://img.youtube.com/vi/09R8_2nJtjg/hqdefault.jpg"),
+    MoonwaveCategory("Rock", Color(0xFF34495E), "https://img.youtube.com/vi/kXYiU_JCYtU/hqdefault.jpg", "https://img.youtube.com/vi/hTWKbfoikeg/hqdefault.jpg"),
+    MoonwaveCategory("Pop", Color(0xFFE91E63), "https://img.youtube.com/vi/fRh_vgS2dFE/hqdefault.jpg", "https://img.youtube.com/vi/JGwWNGJdvx8/hqdefault.jpg"),
+    MoonwaveCategory("Chill", Color(0xFF27AE60), "https://img.youtube.com/vi/5qap5aO4i9A/hqdefault.jpg", "https://img.youtube.com/vi/RgKAFK5djSk/hqdefault.jpg")
 )
 
-val DefaultMochyMoods = listOf(
+val DefaultMoonwaveMoods = listOf(
     "Chill", "Commute", "Energize", "Focus", "Gaming", "Romance", "Sleep", "Party"
 )
 
 /**
- * Mochy Search Top Header with bold title, user profile avatar, and pill search bar.
+ * Moonwave Search Top Header with bold title, user profile avatar, and pill search bar.
  */
 @Composable
-fun MochySearchTopBar(
+fun MoonwaveSearchTopBar(
     query: String,
     onQueryChange: (String) -> Unit,
     onSearch: (String) -> Unit,
@@ -123,7 +123,7 @@ fun MochySearchTopBar(
 
         Spacer(modifier = Modifier.height(14.dp))
 
-        // Mochy Pill Search Bar
+        // Moonwave Pill Search Bar
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -182,11 +182,11 @@ fun MochySearchTopBar(
 }
 
 /**
- * Mochy Mood & Genre Tile featuring dual tilted overlapping artwork squircles.
+ * Moonwave Mood & Genre Tile featuring dual tilted overlapping artwork squircles.
  */
 @Composable
-fun MochyMoodTile(
-    category: MochyCategory,
+fun MoonwaveMoodTile(
+    category: MoonwaveCategory,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -274,11 +274,11 @@ fun MochyMoodTile(
 }
 
 /**
- * 2-column "For you" grid with Mochy styled tiles.
+ * 2-column "For you" grid with Moonwave styled tiles.
  */
 @Composable
-fun MochyForYouSection(
-    categories: List<MochyCategory> = DefaultMochyCategories,
+fun MoonwaveForYouSection(
+    categories: List<MoonwaveCategory> = DefaultMoonwaveCategories,
     onCategoryClick: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -300,7 +300,7 @@ fun MochyForYouSection(
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 row.forEach { cat ->
-                    MochyMoodTile(
+                    MoonwaveMoodTile(
                         category = cat,
                         onClick = { onCategoryClick(cat.title) },
                         modifier = Modifier.weight(1f)
@@ -315,11 +315,11 @@ fun MochyForYouSection(
 }
 
 /**
- * Mochy "Moods & moments" section with pastel pills.
+ * Moonwave "Moods & moments" section with pastel pills.
  */
 @Composable
-fun MochyMoodsAndMomentsSection(
-    moods: List<String> = DefaultMochyMoods,
+fun MoonwaveMoodsAndMomentsSection(
+    moods: List<String> = DefaultMoonwaveMoods,
     onMoodClick: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {

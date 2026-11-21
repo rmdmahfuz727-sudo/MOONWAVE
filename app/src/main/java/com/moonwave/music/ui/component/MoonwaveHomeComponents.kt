@@ -64,11 +64,11 @@ import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
 /**
- * Mochy Music style Gacha random roll card.
+ * Moonwave Music style Gacha random roll card.
  * Features an animated tumbling 3D die, gradient mesh backdrop, and roll action.
  */
 @Composable
-fun MochyGachaCard(
+fun MoonwaveGachaCard(
     pool: List<OnlineSong>,
     onPlaySong: (OnlineSong) -> Unit,
     modifier: Modifier = Modifier
@@ -280,10 +280,10 @@ fun GachaDie(spinning: Boolean) {
 }
 
 /**
- * Mochy "Recently Played >" carousel with squircle cards and gradient "Liked songs" heart card.
+ * Moonwave "Recently Played >" carousel with squircle cards and gradient "Liked songs" heart card.
  */
 @Composable
-fun MochyRecentlyPlayedRow(
+fun MoonwaveRecentlyPlayedRow(
     recentSongs: List<OnlineSong>,
     onSongClick: (OnlineSong) -> Unit,
     onLikedClick: () -> Unit,
@@ -365,7 +365,7 @@ fun MochyRecentlyPlayedRow(
                 }
             }
 
-            // Recent songs with Mochy SmoothCornerShape
+            // Recent songs with Moonwave SmoothCornerShape
             items(recentSongs) { song ->
                 Column(
                     modifier = Modifier

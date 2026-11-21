@@ -88,7 +88,7 @@ private data class LyricDisplayItem(
     val isPast: Boolean = false
 )
 
-// Apple Music-inspired easing curves
+// MOONWAVE-inspired easing curves
 private object AppleMusicEasing {
     val smoothEnter = CubicBezierEasing(0.25f, 0.46f, 0.45f, 0.94f)
     val smoothExit = CubicBezierEasing(0.25f, 0.46f, 0.45f, 0.94f)
@@ -148,7 +148,7 @@ internal fun SyncedLyricsCompose(
         }
     }
 
-    // ── Improved Apple Music-style springy auto-scroll ──
+    // ── MOONWAVE-style springy auto-scroll ──
     LaunchedEffect(activeIndex) {
         if (activeIndex >= 0 && !listState.isScrollInProgress) {
             performSmoothedScroll(listState, activeIndex, displayItems)
@@ -723,7 +723,7 @@ internal fun LyricsErrorState(
 
 /**
  * Interpolate between two colors smoothly
- * Used for Apple Music-style word highlighting
+ * Used for MOONWAVE-style word highlighting
  */
 private fun interpolateColor(
     startColor: Color,

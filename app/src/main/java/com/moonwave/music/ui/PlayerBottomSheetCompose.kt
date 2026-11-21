@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.os.Build
 import androidx.annotation.RequiresApi
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationSpec
 import androidx.compose.animation.core.AnimationVector1D
@@ -15,6 +16,7 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
@@ -60,12 +62,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Shape
@@ -76,6 +80,7 @@ import androidx.compose.ui.hapticfeedback.HapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.util.VelocityTracker
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -91,6 +96,9 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.lerp
 import androidx.compose.ui.zIndex
+import androidx.core.net.toUri
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.moonwave.music.MainActivity
 import com.moonwave.music.R
@@ -100,6 +108,7 @@ import com.moonwave.music.ui.component.press3D
 import com.moonwave.music.ui.player.ArtworkPager
 import com.moonwave.music.ui.player.FullPlayerScreen
 import com.moonwave.music.ui.player.PlayerUiState
+import com.moonwave.music.ui.theme.observeKey
 import com.moonwave.music.viewmodel.PlayerSharedViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
@@ -162,7 +171,7 @@ private fun Dp.nonNegative(): Dp = takeIf { it.value.isFinite() && it.value > 0f
 // ==========================================
 // 3. STEP 3: DRAW-PHASE & LAYOUT-PHASE PROVIDERS
 // ==========================================
-val MiniPlayerHeight = 80.dp // High-fidelity capsule height matching controls breathing room
+val MiniPlayerHeight = 72.dp // Compact floating pill matching the MOONWAVE mini player
 
 data class SheetVisualState(
     val currentBottomPadding: Dp,
@@ -722,9 +731,21 @@ fun PlayerBottomSheetCompose(
         val repeatMode by viewModel.repeatMode.collectAsStateWithLifecycle()
         val isShuffleEnabled by viewModel.isShuffleEnabled.collectAsStateWithLifecycle()
         val playerBackgroundColor by viewModel.playerBackgroundColor.collectAsStateWithLifecycle()
+        val audioCodec by viewModel.currentAudioCodec.collectAsStateWithLifecycle()
         val likesCount by viewModel.likesCountFlow.collectAsStateWithLifecycle()
         val isDark = isSystemInDarkTheme()
-        val dynamicBgColor = remember(playerBackgroundColor, isDark) {
+        val appearancePrefs = remember(context) {
+            context.getSharedPreferences(com.moonwave.music.ui.component.AppearancePrefs.PREFS, Context.MODE_PRIVATE)
+        }
+        val frostedEnabled by appearancePrefs.observeKey(
+            com.moonwave.music.ui.component.AppearancePrefs.FROSTED_GLASS,
+            true
+        )
+        val solidStateSurfaces by appearancePrefs.observeKey(
+            com.moonwave.music.ui.component.AppearancePrefs.SOLID_STATE_SURFACES,
+            false
+        )
+        val targetDynamicBgColor = remember(playerBackgroundColor, isDark) {
             val baseColor = Color(playerBackgroundColor)
             val hsl = FloatArray(3)
             androidx.core.graphics.ColorUtils.colorToHSL(baseColor.toArgb(), hsl)
@@ -740,6 +761,17 @@ fun PlayerBottomSheetCompose(
                 hsl[1] = if (isMonochrome) 0f else hsl[1].coerceIn(0.30f, 0.48f)
                 Color(androidx.core.graphics.ColorUtils.HSLToColor(hsl))
             }
+        }
+        // Blend the mini/expanded player surface between tracks instead of snapping colours.
+        val dynamicBgColor by animateColorAsState(
+            targetValue = targetDynamicBgColor,
+            animationSpec = tween(durationMillis = 700, easing = FastOutSlowInEasing),
+            label = "PlayerSheetSurfaceColor"
+        )
+        val surfaceBgColor = if (frostedEnabled && !solidStateSurfaces) {
+            dynamicBgColor.copy(alpha = 0.88f)
+        } else {
+            dynamicBgColor
         }
         val isCurrentSongDisliked by viewModel.isCurrentSongDisliked.collectAsStateWithLifecycle()
         val isCurrentSongDownloaded by viewModel.isCurrentSongDownloaded.collectAsStateWithLifecycle()
@@ -788,7 +820,7 @@ fun PlayerBottomSheetCompose(
         val uiState = remember(
             currentSong, isPlaying, duration, isProcessing, currentSongIndex,
             isHapticsEnabled, miniPlayerBlendColor, isCurrentSongFavorite, isCurrentSongDisliked, repeatMode, isShuffleEnabled,
-            playerBackgroundColor, likesCount, isCurrentSongDownloaded, currentSongDownloadProgress
+            playerBackgroundColor, likesCount, isCurrentSongDownloaded, currentSongDownloadProgress, audioCodec
         ) {
             PlayerUiState(
                 currentSong = currentSong,
@@ -805,7 +837,8 @@ fun PlayerBottomSheetCompose(
                 playerBackgroundColor = playerBackgroundColor,
                 likesCount = likesCount,
                 isCurrentSongDownloaded = isCurrentSongDownloaded,
-                currentSongDownloadProgress = currentSongDownloadProgress
+                currentSongDownloadProgress = currentSongDownloadProgress,
+                audioCodec = audioCodec
             )
         }
 
@@ -1064,12 +1097,22 @@ fun PlayerBottomSheetCompose(
                                     transformOrigin = TransformOrigin(0.5f, 1f)
                                 }
                                 .shadow(
-                                    elevation = if (currentSheetContentState == PlayerSheetState.COLLAPSED) 6.dp else 0.dp,
-                                    shape = playerShadowShape
+                                    elevation = if (currentSheetContentState == PlayerSheetState.COLLAPSED) (if (frostedEnabled) 8.dp else 6.dp) else 0.dp,
+                                    shape = playerShadowShape,
+                                    spotColor = Color.Black.copy(alpha = if (isDark) 0.35f else 0.16f)
                                 )
                                 .background(
-                                    color = dynamicBgColor,
+                                    color = surfaceBgColor,
                                     shape = playerShadowShape
+                                )
+                                .then(
+                                    if (currentSheetContentState == PlayerSheetState.COLLAPSED) {
+                                        Modifier.border(
+                                            width = 1.dp,
+                                            color = (if (isDark) Color.White else Color.Black).copy(alpha = if (frostedEnabled) 0.10f else 0.06f),
+                                            shape = playerShadowShape
+                                        )
+                                    } else Modifier
                                 )
                                 .playerSheetVerticalDragGesture(enabled = !isLyricsModeEnabled && !isQueueExpanded, handler = sheetVerticalDragGestureHandler)
                                 .clickable(
@@ -1117,7 +1160,7 @@ fun PlayerBottomSheetCompose(
                                 val t = playerContentExpansionFraction.value
                                 val lyricsT = lyricsArtworkProgress
 
-                                val miniSizePx = 48.dp.toPx()
+                                val miniSizePx = 46.dp.toPx()
                                 val fullSizePx = albumArtSizeDp.toPx()
                                 val normalScale = androidx.compose.ui.util.lerp(miniSizePx / fullSizePx, 1f, t)
 
@@ -1125,10 +1168,10 @@ fun PlayerBottomSheetCompose(
                                 val startPaddingPx = sheetVisualState.currentHorizontalPaddingStartPxProvider()
 
                                 // Position relative to the Surface top-left
-                                val xStartPx = startPaddingPx + 16.dp.toPx()
+                                val xStartPx = startPaddingPx + 10.dp.toPx()
                                 val xEndPx = (with(density) { screenWidth.dp.toPx() } - fullSizePx) / 2f
 
-                                val yStartPx = 16.dp.toPx()
+                                val yStartPx = 13.dp.toPx()
                                 val minTopOffsetDp = with(density) { statusBarTopPx.toDp() } + 68.dp // Removed 16.dp extra gap
                                 val topOffsetDp = ((containerHeight - albumArtSizeDp) / 2f - 220.dp).coerceAtLeast(minTopOffsetDp)
                                 val yEndPx = with(density) { topOffsetDp.toPx() }
@@ -1281,150 +1324,207 @@ private fun MiniPlayerContentInternal(
 
     val isDark = isSystemInDarkTheme()
     val contentColor = if (isDark) Color.White else Color(0xFF1C1B1F)
-    val contentSecondary = if (isDark) Color.White.copy(alpha = 0.6f) else Color(0xFF1C1B1F).copy(alpha = 0.6f)
-    val playBgColor = if (isDark) Color(0x1AFFFFFF) else Color(0x0D000000)
+    val contentSecondary = if (isDark) Color.White.copy(alpha = 0.62f) else Color(0xFF1C1B1F).copy(alpha = 0.62f)
+    val playBgColor = accentColor
+    val playContentColor = if (isDark) Color(0xFF17141C) else Color.White
+    val context = LocalContext.current
+    val artworkUri = remember(currentSong) { currentSong.getAlbumArtUri() }
+    val artworkUrl = remember(artworkUri) {
+        artworkUri?.toString()?.takeIf { it.isNotEmpty() }?.let { SongItem.enhanceThumbnailUrl(it) }
+    }
+    val artworkRequest = remember(context, artworkUrl) {
+        artworkUrl?.let { url ->
+            ImageRequest.Builder(context)
+                .data(url.toUri())
+                .crossfade(true)
+                .fallback(R.drawable.ic_music_note)
+                .error(R.drawable.ic_music_note)
+                .build()
+        }
+    }
 
-    Row(
+    val currentPosition by viewModel.currentPosition.collectAsStateWithLifecycle()
+    val duration by viewModel.duration.collectAsStateWithLifecycle()
+
+    Box(
         modifier = modifier
             .fillMaxSize()
             .press3D(maxTilt = 3.5f, pressedScale = 0.985f)
             .clickable(onClick = onClick)
-            .padding(start = 10.dp, end = 8.dp, top = 10.dp, bottom = 10.dp),
-        verticalAlignment = Alignment.CenterVertically
     ) {
-        // Morphing Art Space
-        Box(
-            modifier = Modifier.size(60.dp),
-            contentAlignment = Alignment.Center
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(start = 10.dp, end = 8.dp, top = 6.dp, bottom = 7.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            val currentPosition by viewModel.currentPosition.collectAsStateWithLifecycle()
-            val duration by viewModel.duration.collectAsStateWithLifecycle()
-
-            val progressAnimatable = remember { Animatable(0f) }
-            LaunchedEffect(currentPosition, duration) {
-                val target = if (duration > 0) (currentPosition.toFloat() / duration.toFloat()).coerceIn(0f, 1f) else 0f
-                progressAnimatable.animateTo(
-                    targetValue = target,
-                    animationSpec = tween(durationMillis = 350, easing = LinearEasing)
-                )
-            }
-
-            val amplitudeAnimatable = remember { Animatable(if (isPlaying) 1f else 0f) }
-            LaunchedEffect(isPlaying) {
-                amplitudeAnimatable.animateTo(
-                    targetValue = if (isPlaying) 1f else 0f,
-                    animationSpec = spring(
-                        dampingRatio = Spring.DampingRatioMediumBouncy,
-                        stiffness = Spring.StiffnessLow
+            // Morphing Art Space - compact circular artwork that expands into the full cover
+            Box(
+                modifier = Modifier.size(54.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                val progressAnimatable = remember { Animatable(0f) }
+                LaunchedEffect(currentPosition, duration) {
+                    val target = if (duration > 0) (currentPosition.toFloat() / duration.toFloat()).coerceIn(0f, 1f) else 0f
+                    progressAnimatable.animateTo(
+                        targetValue = target,
+                        animationSpec = tween(durationMillis = 350, easing = LinearEasing)
                     )
-                )
+                }
+
+                val amplitudeAnimatable = remember { Animatable(if (isPlaying) 1f else 0f) }
+                LaunchedEffect(isPlaying) {
+                    amplitudeAnimatable.animateTo(
+                        targetValue = if (isPlaying) 1f else 0f,
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                            stiffness = Spring.StiffnessLow
+                        )
+                    )
+                }
+
+                if (isProcessing) {
+                    CircularWavyProgressIndicator(
+                        modifier = Modifier.size(52.dp),
+                        color = accentColor,
+                        trackColor = accentColor.copy(alpha = 0.25f),
+                        amplitude = amplitudeAnimatable.value,
+                        stroke = androidx.compose.ui.graphics.drawscope.Stroke(
+                            width = with(LocalDensity.current) { 5.dp.toPx() },
+                            cap = androidx.compose.ui.graphics.StrokeCap.Round
+                        ),
+                        trackStroke = androidx.compose.ui.graphics.drawscope.Stroke(
+                            width = with(LocalDensity.current) { 5.dp.toPx() },
+                            cap = androidx.compose.ui.graphics.StrokeCap.Round
+                        )
+                    )
+                } else {
+                    CircularWavyProgressIndicator(
+                        progress = { progressAnimatable.value },
+                        modifier = Modifier.size(54.dp),
+                        color = accentColor,
+                        trackColor = accentColor.copy(alpha = 0.22f),
+                        waveSpeed = WavyProgressIndicatorDefaults.CircularWavelength * 0.4f,
+                        amplitude = { amplitudeAnimatable.value },
+                        stroke = androidx.compose.ui.graphics.drawscope.Stroke(
+                            width = with(LocalDensity.current) { 5.dp.toPx() },
+                            cap = androidx.compose.ui.graphics.StrokeCap.Round
+                        ),
+                        trackStroke = androidx.compose.ui.graphics.drawscope.Stroke(
+                            width = with(LocalDensity.current) { 5.dp.toPx() },
+                            cap = androidx.compose.ui.graphics.StrokeCap.Round
+                        )
+                    )
+                }
+
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .shadow(elevation = 3.dp, shape = SmoothCornerShape(16.dp))
+                        .clip(SmoothCornerShape(16.dp))
+                        .background(if (isDark) Color(0xFF23222A) else Color(0xFFE8E7EE)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    artworkRequest?.let { request ->
+                        AsyncImage(
+                            model = request,
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    } ?: Icon(
+                        painter = painterResource(R.drawable.ic_music_note),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
             }
 
-            if (isProcessing) {
-                CircularWavyProgressIndicator(
-                    modifier = Modifier.size(58.dp),
-                    color = accentColor,
-                    trackColor = accentColor.copy(alpha = 0.25f),
-                    amplitude = amplitudeAnimatable.value,
-                    stroke = androidx.compose.ui.graphics.drawscope.Stroke(
-                        width = with(LocalDensity.current) { 6.dp.toPx() },
-                        cap = androidx.compose.ui.graphics.StrokeCap.Round
+            Spacer(modifier = Modifier.width(12.dp))
+
+            // Song Info (Mochy bold title + subtle artist)
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = currentSong.title,
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        fontWeight = FontWeight.Bold,
+                        color = contentColor
                     ),
-                    trackStroke = androidx.compose.ui.graphics.drawscope.Stroke(
-                        width = with(LocalDensity.current) { 6.dp.toPx() },
-                        cap = androidx.compose.ui.graphics.StrokeCap.Round
-                    )
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
-            } else {
-                CircularWavyProgressIndicator(
-                    progress = { progressAnimatable.value },
-                    modifier = Modifier.size(58.dp),
-                    color = accentColor,
-                    trackColor = accentColor.copy(alpha = 0.25f),
-                    waveSpeed = WavyProgressIndicatorDefaults.CircularWavelength * 0.4f,
-                    amplitude = { amplitudeAnimatable.value },
-                    stroke = androidx.compose.ui.graphics.drawscope.Stroke(
-                        width = with(LocalDensity.current) { 6.dp.toPx() },
-                        cap = androidx.compose.ui.graphics.StrokeCap.Round
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = currentSong.artist,
+                    style = MaterialTheme.typography.bodySmall.copy(
+                        color = contentSecondary
                     ),
-                    trackStroke = androidx.compose.ui.graphics.drawscope.Stroke(
-                        width = with(LocalDensity.current) { 6.dp.toPx() },
-                        cap = androidx.compose.ui.graphics.StrokeCap.Round
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+
+            // Controls Row (Mochy 3D tactile icons)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(
+                    onClick = { viewModel.playPreviousSong() },
+                    modifier = Modifier.press3D(maxTilt = 5f, pressedScale = 0.92f)
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_skip_previous),
+                        contentDescription = "Previous",
+                        tint = contentSecondary,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
+
+                IconButton(
+                    onClick = {
+                        if (isPlaying) viewModel.pauseAudio() else viewModel.playAudio()
+                    },
+                    modifier = Modifier
+                        .size(40.dp)
+                        .press3D(maxTilt = 6f, pressedScale = 0.90f)
+                        .background(playBgColor, CircleShape)
+                ) {
+                    Icon(
+                        painter = painterResource(if (isPlaying) R.drawable.ic_pause else R.drawable.ic_play),
+                        contentDescription = "Play/Pause",
+                        tint = playContentColor,
+                        modifier = Modifier.size(19.dp)
+                    )
+                }
+
+                IconButton(
+                    onClick = { viewModel.playNextSong() },
+                    modifier = Modifier.press3D(maxTilt = 5f, pressedScale = 0.92f)
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_skip_next),
+                        contentDescription = "Next",
+                        tint = contentSecondary,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
+            }
+        }
+
+        // Mochy Music signature subtle bottom progress line
+        val progressFraction = if (duration > 0) (currentPosition.toFloat() / duration.toFloat()).coerceIn(0f, 1f) else 0f
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .fillMaxWidth(progressFraction)
+                .height(2.5.dp)
+                .background(
+                    Brush.horizontalGradient(
+                        listOf(
+                            accentColor.copy(alpha = 0.70f),
+                            accentColor
+                        )
                     )
                 )
-            }
-
-            Box(modifier = Modifier.size(48.dp)) {
-                // Placeholder Box for structure: AsyncImage is managed globally via parent's floating shared element!
-            }
-        }
-
-        Spacer(modifier = Modifier.width(20.dp))
-
-        // Song Info
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = currentSong.title,
-                style = MaterialTheme.typography.bodyMedium.copy(
-                    fontWeight = FontWeight.Bold,
-                    color = contentColor
-                ),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(
-                text = currentSong.artist,
-                style = MaterialTheme.typography.bodySmall.copy(
-                    color = contentSecondary
-                ),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
-
-        // Controls Row using custom icons painterResource
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(
-                onClick = { viewModel.playPreviousSong() },
-                modifier = Modifier.press3D(maxTilt = 5f, pressedScale = 0.92f)
-            ) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_skip_previous),
-                    contentDescription = "Previous",
-                    tint = contentColor,
-                    modifier = Modifier.size(24.dp)
-                )
-            }
-
-            IconButton(
-                onClick = {
-                    if (isPlaying) viewModel.pauseAudio() else viewModel.playAudio()
-                },
-                modifier = Modifier
-                    .size(42.dp)
-                    .press3D(maxTilt = 6f, pressedScale = 0.90f)
-                    .background(playBgColor, CircleShape)
-            ) {
-                Icon(
-                    painter = painterResource(if (isPlaying) R.drawable.ic_pause else R.drawable.ic_play),
-                    contentDescription = "Play/Pause",
-                    tint = contentColor,
-                    modifier = Modifier.size(20.dp)
-                )
-            }
-
-            IconButton(
-                onClick = { viewModel.playNextSong() },
-                modifier = Modifier.press3D(maxTilt = 5f, pressedScale = 0.92f)
-            ) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_skip_next),
-                    contentDescription = "Next",
-                    tint = contentColor,
-                    modifier = Modifier.size(24.dp)
-                )
-            }
-        }
+        )
     }
 }
