@@ -1203,6 +1203,8 @@ class AudioPlaybackService : MediaSessionService() {
             if (scheme == "http" || scheme == "https" || scheme == "innertube") {
                 currentlyLoadedPath = null
                 Log.d(TAG, "Loading remote stream: ${uri.toString().take(80)}...")
+            } else if (scheme == "file") {
+                currentlyLoadedPath = uri.path
             } else {
                 val path = AudioFileManager.getRealPathFromURI(this, uri)
                 currentlyLoadedPath = path

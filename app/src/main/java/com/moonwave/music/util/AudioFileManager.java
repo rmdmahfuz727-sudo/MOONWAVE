@@ -129,6 +129,7 @@ public class AudioFileManager {
             mimeType = "audio/mpeg";
         }
         values.put(MediaStore.Audio.Media.MIME_TYPE, mimeType);
+        values.put(MediaStore.Audio.Media.IS_MUSIC, 1);
 
         // Save under Music/Moonwave folder
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -162,8 +163,16 @@ public class AudioFileManager {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 values.clear();
                 values.put(MediaStore.Audio.Media.IS_PENDING, 0);
+                values.put(MediaStore.Audio.Media.IS_MUSIC, 1);
                 resolver.update(itemUri, values, null, null);
             }
+
+            // Also request media scanner to index file immediately
+            try {
+                File publicMusicDir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MUSIC), "Moonwave");
+                File publicFile = new File(publicMusicDir, sourceFile.getName());
+                android.media.MediaScannerConnection.scanFile(context, new String[]{publicFile.getAbsolutePath()}, new String[]{mimeType}, null);
+            } catch (Exception ignored) {}
 
             Log.d(TAG, "File copied to MediaStore successfully: Music/Moonwave/" + sourceFile.getName());
 

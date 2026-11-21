@@ -79,6 +79,9 @@ import com.moonwave.music.data.innertube.PlaylistPage
 import com.moonwave.music.data.innertube.SearchItem
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.moonwave.music.viewmodel.PlayerSharedViewModel
+import com.moonwave.music.ui.component.MochyCollectionScreen
+import com.moonwave.music.ui.component.MochyHeroType
+import com.moonwave.music.model.SongItem
 
 
 /**
@@ -134,7 +137,7 @@ fun AlbumDetailView(
 }
 
 /**
- * Enhanced premium detail view for a Playlist leveraging Unified Parallax system.
+ * Enhanced Mochy-style detail view for a Playlist with centered hero, warm gradient, and action buttons.
  */
 @Composable
 fun PlaylistDetailView(
@@ -146,43 +149,57 @@ fun PlaylistDetailView(
     onSongMenuClick: (OnlineSong) -> Unit,
     onStartRadioClick: (String) -> Unit
 ) {
-    val configuration = LocalConfiguration.current
-    val isLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
-
-    AdaptiveDetailContainer(
-        isLandscape = isLandscape,
-        thumbnailUrl = playlistPage.playlist.thumbnailUrl,
-        title = playlistPage.playlist.title,
-        subtitle = "Curated Playlist • ${playlistPage.songs.size} items",
-        sharedElementKey = playlistPage.playlist.playlistId,
-        onBack = onBack,
-        headerActions = {
-            ExpressiveConnectedButtonGroup(
-                onShuffleClick = { if (playlistPage.songs.isNotEmpty()) onSongClick(playlistPage.songs.first(), playlistPage.songs.shuffled(), 0) },
-                onRadioClick = { if (playlistPage.songs.isNotEmpty()) onStartRadioClick(playlistPage.songs.first().videoId) },
-                modifier = Modifier.fillMaxWidth()
-            )
-        }
-    ) {
-        item {
-            HorizontalDivider(
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
-            )
-        }
-        itemsIndexed(
-            items = playlistPage.songs,
-            key = { _, song -> "playlist-song-${song.videoId}" }
-        ) { index, song ->
-            SearchResultItem(
-                item = SearchItem.Song(song),
-                isCurrentlyPlaying = song.videoId == currentOnlineSong?.videoId,
-                isLoading = isLoadingStream && song.videoId == currentOnlineSong?.videoId,
-                onSongMenuClick = onSongMenuClick,
-                onClick = { onSongClick(song, playlistPage.songs, index) }
+    val songs = remember(playlistPage.songs) {
+        playlistPage.songs.map { song ->
+            SongItem.createOnlineSong(
+                song.videoId,
+                song.title,
+                song.artist,
+                "",
+                song.durationMs,
+                song.thumbnailUrl,
+                song.artistId
             )
         }
     }
+    val currentSongItem = remember(currentOnlineSong) {
+        currentOnlineSong?.let {
+            SongItem.createOnlineSong(it.videoId, it.title, it.artist, "", it.durationMs, it.thumbnailUrl, it.artistId)
+        }
+    }
+
+    val isLiked = playlistPage.playlist.playlistId == "LM" || playlistPage.playlist.title.contains("Liked", ignoreCase = true)
+    val heroType = if (isLiked) MochyHeroType.Heart else MochyHeroType.Artwork(playlistPage.playlist.thumbnailUrl)
+
+    MochyCollectionScreen(
+        title = playlistPage.playlist.title,
+        heroType = heroType,
+        songs = songs,
+        currentSong = currentSongItem,
+        isPlaying = !isLoadingStream && currentOnlineSong != null,
+        onBack = onBack,
+        onSongClick = { songItem, _, index ->
+            val orig = playlistPage.songs.getOrNull(index) ?: playlistPage.songs.firstOrNull { it.videoId == songItem.videoId }
+            if (orig != null) {
+                onSongClick(orig, playlistPage.songs, index)
+            }
+        },
+        onSongMenuClick = { songItem ->
+            val orig = playlistPage.songs.firstOrNull { it.videoId == songItem.videoId }
+            if (orig != null) onSongMenuClick(orig)
+        },
+        onPlayAll = { _ ->
+            if (playlistPage.songs.isNotEmpty()) {
+                onSongClick(playlistPage.songs.first(), playlistPage.songs, 0)
+            }
+        },
+        onShuffle = { _ ->
+            if (playlistPage.songs.isNotEmpty()) {
+                val shuffled = playlistPage.songs.shuffled()
+                onSongClick(shuffled.first(), shuffled, 0)
+            }
+        }
+    )
 }
 
 /**

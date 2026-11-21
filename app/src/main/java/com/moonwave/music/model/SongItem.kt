@@ -26,7 +26,19 @@ data class SongItem(
     private var uriString: String? = null
 
     var contentUri: Uri
-        get() = uriString?.toUri() ?: "content://media/external/audio/media/$id".toUri()
+        get() {
+            if (uriString != null) return uriString!!.toUri()
+            val localPath = path ?: data
+            if (!localPath.isNullOrEmpty() && (localPath.startsWith("/") || localPath.startsWith("file:"))) {
+                try {
+                    val file = if (localPath.startsWith("file:")) File(localPath.removePrefix("file://")) else File(localPath)
+                    if (file.exists() && file.canRead()) {
+                        return Uri.fromFile(file)
+                    }
+                } catch (_: Exception) {}
+            }
+            return "content://media/external/audio/media/$id".toUri()
+        }
         set(value) {
             uriString = value.toString()
         }

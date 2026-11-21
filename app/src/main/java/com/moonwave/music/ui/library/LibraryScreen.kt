@@ -118,6 +118,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import com.moonwave.music.ui.component.MochyCollectionScreen
+import com.moonwave.music.ui.component.MochyHeroType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -330,13 +332,78 @@ fun LibraryScreen(
                     "Albums" -> AlbumsTabContent(nestedScrollConnection)
                     "Artists" -> ArtistsTabContent(nestedScrollConnection)
                     "Recap" -> RecapTabContent(nestedScrollConnection, viewModel, onNavigateToExplore)
-                    "Local Files", "Downloads" -> {
-                        // Local and Downloads are now separate library pages. Downloads only shows
-                        // files MOONWAVE saved under its own Download/Music folder; Local shows
-                        // the rest of the device's music so the same song never appears twice.
-                        val downloadsOnly = activeTab == "Downloads"
-                        val tabSongs = remember(localSongs, downloadsOnly) {
-                            localSongs.filter { isMoonwaveDownloadedSong(it) == downloadsOnly }
+                    "Downloads" -> {
+                        val downloadedSongs = remember(localSongs) {
+                            localSongs.filter { isMoonwaveDownloadedSong(it) }
+                        }
+                        val currentSong by viewModel.currentSong.collectAsStateWithLifecycle()
+                        val isPlaying by viewModel.isPlaying.collectAsStateWithLifecycle()
+
+                        MochyCollectionScreen(
+                            title = "Downloads",
+                            heroType = MochyHeroType.Download,
+                            songs = downloadedSongs,
+                            currentSong = currentSong,
+                            isPlaying = isPlaying,
+                            onBack = { activeTab = "All" },
+                            onSongClick = { song, list, _ ->
+                                viewModel.setSongList(list)
+                                viewModel.playSong(song)
+                            },
+                            onSongMenuClick = { song ->
+                                val bs = SongActionsBottomSheet.newInstance(song)
+                                bs.setActionListener(object : SongActionsBottomSheet.ActionListener {
+                                    override fun onPlay(s: SongItem) = viewModel.playSong(s)
+                                    override fun onPlayNext(s: SongItem) {
+                                        viewModel.addToQueueNext(s)
+                                        scope.launch { com.moonwave.music.ui.SnackbarController.showMessage("Playing next: ${s.title}") }
+                                    }
+                                    override fun onAddToQueue(s: SongItem) {
+                                        viewModel.addToQueue(s)
+                                        scope.launch { com.moonwave.music.ui.SnackbarController.showMessage("Added to queue: ${s.title}") }
+                                    }
+                                    override fun onDelete(s: SongItem) {
+                                        scope.launch { scanLocalFiles(context, viewModel) }
+                                    }
+                                    override fun onEdit(s: SongItem) {
+                                        onEditSong(s)
+                                    }
+                                    override fun onFavorite(s: SongItem, isFav: Boolean) {
+                                        viewModel.toggleFavorite(s.id)
+                                    }
+                                    override fun onShare(s: SongItem) {
+                                        try {
+                                            val intent = Intent(Intent.ACTION_SEND).apply {
+                                                type = "audio/*"
+                                                putExtra(Intent.EXTRA_STREAM, s.contentUri)
+                                                putExtra(Intent.EXTRA_TEXT, "Listen to ${s.title}")
+                                            }
+                                            context.startActivity(Intent.createChooser(intent, "Share Song"))
+                                        } catch (_: Exception) {}
+                                    }
+                                })
+                                val activity = getActivityFromContext(context) as? androidx.fragment.app.FragmentActivity
+                                activity?.let { bs.show(it.supportFragmentManager, "SongActionsBottomSheet") }
+                            },
+                            onPlayAll = { list ->
+                                if (list.isNotEmpty()) {
+                                    viewModel.setSongList(list)
+                                    viewModel.playSong(list.first())
+                                }
+                            },
+                            onShuffle = { list ->
+                                if (list.isNotEmpty()) {
+                                    val shuffled = list.shuffled()
+                                    viewModel.setSongList(shuffled)
+                                    viewModel.playSong(shuffled.first())
+                                }
+                            }
+                        )
+                    }
+                    "Local Files" -> {
+                        val downloadsOnly = false
+                        val tabSongs = remember(localSongs) {
+                            localSongs.filter { !isMoonwaveDownloadedSong(it) }
                         }
 
                         // Scan Local Files helper
@@ -1238,12 +1305,50 @@ private fun PlaylistsTabContent(
         )
     }
 
-    selectedLocalPlaylist?.let { playlist ->
-        LocalPlaylistDetailsBottomSheet(
-            playlist = playlist,
-            viewModel = viewModel,
-            onDismiss = { selectedLocalPlaylist = null }
+    val currentSelectedPlaylist = selectedLocalPlaylist
+    if (currentSelectedPlaylist != null) {
+        val songsEntity by viewModel.getSongsForLocalPlaylist(currentSelectedPlaylist.id).collectAsStateWithLifecycle(emptyList())
+        val songs = remember(songsEntity) { songsEntity.map { it.toSongItem() } }
+        val currentSong by viewModel.currentSong.collectAsStateWithLifecycle()
+        val isPlaying by viewModel.isPlaying.collectAsStateWithLifecycle()
+        val isLiked = currentSelectedPlaylist.title.contains("Liked", ignoreCase = true)
+        val context = LocalContext.current
+
+        MochyCollectionScreen(
+            title = currentSelectedPlaylist.title,
+            heroType = if (isLiked) MochyHeroType.Heart else MochyHeroType.Artwork(null),
+            songs = songs,
+            currentSong = currentSong,
+            isPlaying = isPlaying,
+            onBack = { selectedLocalPlaylist = null },
+            onSongClick = { song, list, _ ->
+                viewModel.setSongList(list)
+                viewModel.playSong(song)
+            },
+            onSongMenuClick = { song ->
+                val bs = SongActionsBottomSheet.newInstance(song)
+                val activity = getActivityFromContext(context) as? androidx.fragment.app.FragmentActivity
+                activity?.let { bs.show(it.supportFragmentManager, "SongActionsBottomSheet") }
+            },
+            onPlayAll = { list ->
+                if (list.isNotEmpty()) {
+                    viewModel.setSongList(list)
+                    viewModel.playSong(list.first())
+                }
+            },
+            onShuffle = { list ->
+                if (list.isNotEmpty()) {
+                    val shuffled = list.shuffled()
+                    viewModel.setSongList(shuffled)
+                    viewModel.playSong(shuffled.first())
+                }
+            },
+            onOptionsClick = {
+                viewModel.deleteLocalPlaylist(currentSelectedPlaylist.id)
+                selectedLocalPlaylist = null
+            }
         )
+        return
     }
 
     Column(

@@ -107,12 +107,15 @@ object SongDownloader {
                     return@launch
                 }
 
-                // Create output file
+                // Create temp raw file and final output file
+                val tempRawFile = File(context.cacheDir, "temp_raw_${System.currentTimeMillis()}_$videoId.tmp")
+                val tempCoverFile = File(context.cacheDir, "temp_cov_${System.currentTimeMillis()}_$videoId.jpg")
                 val fileName = "$cleanTitleStr - $cleanArtistStr.mp3"
                 val outputFile = AudioFileManager.createOutputFile(context, fileName)
 
                 val url = URL(streamUrl)
                 val connection = url.openConnection() as HttpURLConnection
+                connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:128.0) Gecko/20100101 Firefox/128.0")
                 connection.connect()
 
                 if (connection.responseCode != HttpURLConnection.HTTP_OK) {
@@ -125,7 +128,7 @@ object SongDownloader {
 
                 val totalBytes = connection.contentLength
                 connection.inputStream.use { input ->
-                    FileOutputStream(outputFile).use { output ->
+                    FileOutputStream(tempRawFile).use { output ->
                         val buffer = ByteArray(8192)
                         var bytesRead: Int
                         var downloadedBytes = 0
@@ -141,7 +144,7 @@ object SongDownloader {
                                     _downloadProgress.value += (videoId to progress)
                                 }
                                 val now = System.currentTimeMillis()
-                                if (now - lastProgressUpdate > 400) { // Throttle updates to every 400ms for fluid CPU performance
+                                if (now - lastProgressUpdate > 400) {
                                     lastProgressUpdate = now
                                     updateNotification(context, cleanTitleStr, progress, notificationId)
                                 }
@@ -150,8 +153,7 @@ object SongDownloader {
                     }
                 }
 
-                // Load, auto-crop 1:1, and compress thumbnail
-                var artworkBytes: ByteArray? = null
+                // Load and save artwork if available
                 val thumbnailUrl = song.thumbnailUrl
                 if (!thumbnailUrl.isNullOrEmpty()) {
                     try {
@@ -166,37 +168,37 @@ object SongDownloader {
                             val y = (originalBitmap.height - size) / 2
                             val croppedBitmap = Bitmap.createBitmap(originalBitmap, x, y, size, size)
                             
-                            val stream = ByteArrayOutputStream()
-                            croppedBitmap.compress(Bitmap.CompressFormat.JPEG, 95, stream) // 95% Highest Quality JPEG
-                            artworkBytes = stream.toByteArray()
+                            FileOutputStream(tempCoverFile).use { fos ->
+                                croppedBitmap.compress(Bitmap.CompressFormat.JPEG, 95, fos)
+                            }
                         }
                     } catch (e: Exception) {
                         Log.e(TAG, "Failed to fetch and crop thumbnail", e)
                     }
                 }
 
-                // Write metadata (Title, Artist, and Album Art) to .mp3 file
-                try {
-                    val audioFile = org.jaudiotagger.audio.AudioFileIO.read(outputFile)
-                    val tag = audioFile.tagOrCreateAndSetDefault
-                    
-                    val cleanAlbumStr = cleanAlbum(song.title)
-                    tag.setField(org.jaudiotagger.tag.FieldKey.TITLE, cleanTitleStr)
-                    tag.setField(org.jaudiotagger.tag.FieldKey.ARTIST, cleanArtistStr)
-                    tag.setField(org.jaudiotagger.tag.FieldKey.ALBUM, cleanAlbumStr)
-                    
-                    if (artworkBytes != null) {
-                        val artwork = org.jaudiotagger.tag.images.StandardArtwork()
-                        artwork.binaryData = artworkBytes
-                        artwork.mimeType = "image/jpeg"
-                        tag.deleteArtworkField()
-                        tag.setField(artwork)
-                    }
-                    
-                    audioFile.commit()
-                } catch (e: Exception) {
-                    Log.e(TAG, "Failed to write tags to file", e)
+                // Convert to 100% compliant, guaranteed-playable MP3 with ID3v2 tags and cover art via FFmpegKit
+                val tempConvertedFile = File(context.cacheDir, "conv_${System.currentTimeMillis()}_$videoId.mp3")
+                val safeTitle = cleanTitleStr.replace("\"", "\\\"")
+                val safeArtist = cleanArtistStr.replace("\"", "\\\"")
+                val safeAlbum = cleanAlbum(song.title).replace("\"", "\\\"")
+
+                val ffmpegCmd = if (tempCoverFile.exists() && tempCoverFile.length() > 0) {
+                    "-y -i \"${tempRawFile.absolutePath}\" -i \"${tempCoverFile.absolutePath}\" -map 0:a -map 1:0 -c:a libmp3lame -q:a 2 -id3v2_version 3 -metadata:s:v title=\"Album cover\" -metadata:s:v comment=\"Cover (front)\" -metadata title=\"$safeTitle\" -metadata artist=\"$safeArtist\" -metadata album=\"$safeAlbum\" \"${tempConvertedFile.absolutePath}\""
+                } else {
+                    "-y -i \"${tempRawFile.absolutePath}\" -c:a libmp3lame -q:a 2 -id3v2_version 3 -metadata title=\"$safeTitle\" -metadata artist=\"$safeArtist\" -metadata album=\"$safeAlbum\" \"${tempConvertedFile.absolutePath}\""
                 }
+
+                val session = com.arthenica.ffmpegkit.FFmpegKit.execute(ffmpegCmd)
+                if (com.arthenica.ffmpegkit.ReturnCode.isSuccess(session.returnCode) && tempConvertedFile.exists() && tempConvertedFile.length() > 0) {
+                    tempConvertedFile.copyTo(outputFile, overwrite = true)
+                    tempConvertedFile.delete()
+                } else {
+                    tempRawFile.copyTo(outputFile, overwrite = true)
+                }
+
+                tempRawFile.delete()
+                tempCoverFile.delete()
 
                 // Copy file to MediaStore and request a media scan
                 AudioFileManager.scanFile(context, outputFile)

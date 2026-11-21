@@ -52,8 +52,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
@@ -232,126 +234,45 @@ class MainActivity : AppCompatActivity() {
 
                 Scaffold(
                     contentWindowInsets = WindowInsets(0, 0, 0, 0),
-                    bottomBar = {
-                        val navBackStackEntry by currentNavController.currentBackStackEntryAsState()
-                        val currentDestination = navBackStackEntry?.destination
-
-                        val showBottomBar = currentDestination?.route in listOf("explore", "library", "effects", "settings")
-
-                        val density = LocalDensity.current
-                        val navigationBarsHeightPx = WindowInsets.navigationBars.getBottom(density).toFloat()
-                        val bottomNavHeight = 80.dp
-                        val bottomNavHeightPx = with(density) { bottomNavHeight.toPx() }
-                        val totalSlideDistPx = bottomNavHeightPx + navigationBarsHeightPx
-
-                        val playerExpansionFractionState = playerViewModel.playerExpansionFraction.collectAsState()
-
-                        // This is the target for general bottom nav visibility (like scrolling or settings screen)
-                        val baseTargetTranslation = if (showBottomBar && isBottomNavVisible) 0f else totalSlideDistPx
-
-                        val animatedBaseTranslationState = animateFloatAsState(
-                            targetValue = baseTargetTranslation,
-                            animationSpec = spring(
-                                dampingRatio = 0.85f,
-                                stiffness = Spring.StiffnessLow
-                            ),
-                            label = "BottomNavTranslationY"
-                        )
-
-                        // Monitor translations without triggering recomposition every frame
-                        LaunchedEffect(totalSlideDistPx) {
-                            snapshotFlow {
-                                val currentBase = animatedBaseTranslationState.value
-                                val currentFraction = playerExpansionFractionState.value
-                                (currentBase + (totalSlideDistPx * currentFraction)).coerceAtMost(totalSlideDistPx)
-                            }.collect { translationY ->
-                                playerViewModel.setBottomNavTranslationY(translationY)
-                            }
-                        }
-
-                        val bottomPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-
-                        Box(
-                            modifier = Modifier
-                                .graphicsLayer {
-                                    val currentBase = animatedBaseTranslationState.value
-                                    val currentFraction = playerExpansionFractionState.value
-                                    val translationY = (currentBase + (totalSlideDistPx * currentFraction)).coerceAtMost(totalSlideDistPx)
-                                    this.translationY = translationY
-                                    this.alpha = if (translationY >= totalSlideDistPx - 1f) 0f else 1f
-                                }
-                                .fillMaxWidth()
-                                .padding(bottom = bottomPadding)
-                                .onGloballyPositioned { coordinates ->
-                                    val height = coordinates.size.height.toFloat()
-                                    playerViewModel.setBottomNavHeight(height)
-                                }
-                        ) {
-                            val items = listOf(
-                                Triple("explore", "Explore", R.drawable.ic_explore),
-                                Triple("library", "Library", R.drawable.ic_library_music),
-                                Triple("effects", "Effects", R.drawable.ic_equalizer),
-                                Triple("settings", "Settings", R.drawable.ic_settings)
-                            )
-                            val onNavigate: (String) -> Unit = { route ->
-                                if (route == "explore") {
-                                    exploreViewModel.resetToHome()
-                                }
-                                if (currentDestination?.route != route) {
-                                    currentNavController.navigate(route) {
-                                        popUpTo(currentNavController.graph.findStartDestination().id) {
-                                            saveState = true
-                                        }
-                                        launchSingleTop = true
-                                        restoreState = true
-                                    }
-                                }
-                            }
-                            if (navigationStyle == AppearancePrefs.NAV_DOCKED) {
-                                DockedNavigationBar(
-                                    items = items,
-                                    currentRoute = currentDestination?.route,
-                                    hideNavLabels = hideNavLabels,
-                                    compact = dynamicNavStyle,
-                                    onItemClick = onNavigate
-                                )
-                            } else {
-                                com.moonwave.music.ui.component.MoonwaveNavigationBar(
-                                    items = items,
-                                    currentRoute = currentDestination?.route,
-                                    hideNavLabels = hideNavLabels,
-                                    compact = dynamicNavStyle,
-                                    onItemClick = onNavigate
-                                )
-                            }
-                        }
-                    }
-                ) { paddingValues ->
+                    containerColor = Color.Transparent
+                ) { _ ->
                     val navBackStackEntry by currentNavController.currentBackStackEntryAsState()
                     val currentDestination = navBackStackEntry?.destination
+
                     val showBottomBar = currentDestination?.route in listOf("explore", "library", "effects", "settings")
+
+                    val density = LocalDensity.current
+                    val navigationBarsHeightPx = WindowInsets.navigationBars.getBottom(density).toFloat()
+                    val bottomNavHeight = if (navigationStyle == AppearancePrefs.NAV_DOCKED) 80.dp else (if (dynamicNavStyle) 56.dp else 64.dp)
+                    val bottomNavHeightPx = with(density) { bottomNavHeight.toPx() }
+                    val totalSlideDistPx = bottomNavHeightPx + navigationBarsHeightPx
 
                     val playerExpansionFractionState = playerViewModel.playerExpansionFraction.collectAsState()
 
-                    // Base padding target not considering expansion
-                    val baseTargetPadding = if (showBottomBar && isBottomNavVisible) {
-                        paddingValues.calculateBottomPadding()
-                    } else {
-                        0.dp
-                    }
+                    // This is the target for general bottom nav visibility (like scrolling or settings screen)
+                    val baseTargetTranslation = if (showBottomBar && isBottomNavVisible) 0f else totalSlideDistPx
 
-                    val animatedBasePaddingState = animateDpAsState(
-                        targetValue = baseTargetPadding,
+                    val animatedBaseTranslationState = animateFloatAsState(
+                        targetValue = baseTargetTranslation,
                         animationSpec = spring(
                             dampingRatio = 0.85f,
                             stiffness = Spring.StiffnessLow
                         ),
-                        label = "BottomNavPadding"
+                        label = "BottomNavTranslationY"
                     )
 
-                    // Final padding does not scale down during expansion to prevent massive Layout invalidation
-                    // The player sheet covers the NavHost anyway, so keeping padding static is optimal
-                    val finalPadding = animatedBasePaddingState.value
+                    // Monitor translations without triggering recomposition every frame
+                    LaunchedEffect(totalSlideDistPx) {
+                        snapshotFlow {
+                            val currentBase = animatedBaseTranslationState.value
+                            val currentFraction = playerExpansionFractionState.value
+                            (currentBase + (totalSlideDistPx * currentFraction)).coerceAtMost(totalSlideDistPx)
+                        }.collect { translationY ->
+                            playerViewModel.setBottomNavTranslationY(translationY)
+                        }
+                    }
+
+                    val bottomPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
 
                     val tabSwitchBlurRadius = remember { Animatable(0f) }
                     LaunchedEffect(currentDestination?.route) {
@@ -374,7 +295,6 @@ class MainActivity : AppCompatActivity() {
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .padding(bottom = finalPadding.coerceAtLeast(0.dp))
                                 .blur(tabSwitchBlurRadius.value.dp)
                         ) {
                             val routeIndices = remember {
@@ -534,6 +454,65 @@ class MainActivity : AppCompatActivity() {
                                         onNavigateUp = {
                                             currentNavController.navigateUp()
                                         }
+                                    )
+                                }
+                            }
+                        }
+
+                        // 2. Navigation Bar: Truly floating over the edge-to-edge content
+                        if (showBottomBar) {
+                            Box(
+                                modifier = Modifier
+                                    .align(Alignment.BottomCenter)
+                                    .graphicsLayer {
+                                        val currentBase = animatedBaseTranslationState.value
+                                        val currentFraction = playerExpansionFractionState.value
+                                        val translationY = (currentBase + (totalSlideDistPx * currentFraction)).coerceAtMost(totalSlideDistPx)
+                                        this.translationY = translationY
+                                        this.alpha = if (translationY >= totalSlideDistPx - 1f) 0f else 1f
+                                    }
+                                    .fillMaxWidth()
+                                    .padding(bottom = bottomPadding)
+                                    .onGloballyPositioned { coordinates ->
+                                        val height = coordinates.size.height.toFloat()
+                                        playerViewModel.setBottomNavHeight(height)
+                                    }
+                            ) {
+                                val items = listOf(
+                                    Triple("explore", "Explore", R.drawable.ic_explore),
+                                    Triple("library", "Library", R.drawable.ic_library_music),
+                                    Triple("effects", "Effects", R.drawable.ic_equalizer),
+                                    Triple("settings", "Settings", R.drawable.ic_settings)
+                                )
+                                val onNavigate: (String) -> Unit = { route ->
+                                    if (route == "explore") {
+                                        exploreViewModel.resetToHome()
+                                    }
+                                    if (currentDestination?.route != route) {
+                                        currentNavController.navigate(route) {
+                                            popUpTo(currentNavController.graph.findStartDestination().id) {
+                                                saveState = true
+                                            }
+                                            launchSingleTop = true
+                                            restoreState = true
+                                        }
+                                    }
+                                }
+                                if (navigationStyle == AppearancePrefs.NAV_DOCKED) {
+                                    DockedNavigationBar(
+                                        items = items,
+                                        currentRoute = currentDestination?.route,
+                                        hideNavLabels = hideNavLabels,
+                                        compact = dynamicNavStyle,
+                                        onItemClick = onNavigate
+                                    )
+                                } else {
+                                    com.moonwave.music.ui.component.MoonwaveNavigationBar(
+                                        items = items,
+                                        currentRoute = currentDestination?.route,
+                                        hideNavLabels = hideNavLabels,
+                                        compact = dynamicNavStyle,
+                                        onItemClick = onNavigate
                                     )
                                 }
                             }
