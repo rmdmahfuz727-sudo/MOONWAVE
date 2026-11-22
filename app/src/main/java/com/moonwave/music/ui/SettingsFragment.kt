@@ -353,6 +353,16 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         prefs.edit { putBoolean(com.moonwave.music.ui.component.AppearancePrefs.FORCE_HIGH_REFRESH_RATE, enabled) }
     }
 
+    private val _liquidGlass = MutableStateFlow(
+        prefs.getBoolean(com.moonwave.music.ui.component.AppearancePrefs.LIQUID_GLASS, true)
+    )
+    val liquidGlass: StateFlow<Boolean> = _liquidGlass.asStateFlow()
+
+    fun setLiquidGlass(enabled: Boolean) {
+        _liquidGlass.value = enabled
+        prefs.edit { putBoolean(com.moonwave.music.ui.component.AppearancePrefs.LIQUID_GLASS, enabled) }
+    }
+
     private val _frostedGlass = MutableStateFlow(
         prefs.getBoolean(com.moonwave.music.ui.component.AppearancePrefs.FROSTED_GLASS, true)
     )
@@ -893,6 +903,7 @@ fun SettingsScreenContent(
     val navigationStyle by viewModel.navigationStyle.collectAsStateWithLifecycle()
     val slideNavOnScroll by viewModel.slideNavOnScroll.collectAsStateWithLifecycle()
     val forceHighRefreshRate by viewModel.forceHighRefreshRate.collectAsStateWithLifecycle()
+    val liquidGlass by viewModel.liquidGlass.collectAsStateWithLifecycle()
     val frostedGlass by viewModel.frostedGlass.collectAsStateWithLifecycle()
     val solidStateSurfaces by viewModel.solidStateSurfaces.collectAsStateWithLifecycle()
     val tabSwitchingBlur by viewModel.tabSwitchingBlur.collectAsStateWithLifecycle()
@@ -1084,6 +1095,8 @@ fun SettingsScreenContent(
                 onSlideNavOnScrollChange = { viewModel.setSlideNavOnScroll(it) },
                 forceHighRefreshRate = forceHighRefreshRate,
                 onForceHighRefreshRateChange = { viewModel.setForceHighRefreshRate(it) },
+                liquidGlass = liquidGlass,
+                onLiquidGlassChange = { viewModel.setLiquidGlass(it) },
                 frostedGlass = frostedGlass,
                 onFrostedGlassChange = { viewModel.setFrostedGlass(it) },
                 solidStateSurfaces = solidStateSurfaces,
@@ -1855,6 +1868,8 @@ private fun AppearanceScreen(
     onSlideNavOnScrollChange: (Boolean) -> Unit,
     forceHighRefreshRate: Boolean,
     onForceHighRefreshRateChange: (Boolean) -> Unit,
+    liquidGlass: Boolean,
+    onLiquidGlassChange: (Boolean) -> Unit,
     frostedGlass: Boolean,
     onFrostedGlassChange: (Boolean) -> Unit,
     solidStateSurfaces: Boolean,

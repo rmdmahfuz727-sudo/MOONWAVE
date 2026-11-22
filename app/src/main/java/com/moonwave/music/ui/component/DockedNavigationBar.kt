@@ -25,6 +25,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -56,10 +57,12 @@ fun DockedNavigationBar(
         context.getSharedPreferences(AppearancePrefs.PREFS, android.content.Context.MODE_PRIVATE)
     }
     val frostedEnabled by prefs.observeKey(AppearancePrefs.FROSTED_GLASS, true)
+    val liquidGlass by prefs.observeKey(AppearancePrefs.LIQUID_GLASS, true)
     val solidState by prefs.observeKey(AppearancePrefs.SOLID_STATE_SURFACES, false)
 
     val haptic = LocalHapticFeedback.current
-    val selectedIndex = items.indexOfFirst { it.first == currentRoute }.let { if (it >= 0) it else 0 }
+    // -1 means the current destination is not one of the tabs (e.g. Settings).
+    val selectedIndex = items.indexOfFirst { it.first == currentRoute }
     val barHeight = if (compact) 64.dp else 76.dp
 
     // The chrome must read as a glass surface, never as an opaque black slab. In dark mode use a
@@ -68,9 +71,10 @@ fun DockedNavigationBar(
     val isDark = androidx.compose.foundation.isSystemInDarkTheme()
     val surfaceColor = when {
         solidState -> MaterialTheme.colorScheme.surfaceContainerHigh.copy(
-            alpha = if (isDark) 0.92f else 0.96f
+            alpha = if (isDark) 0.95f else 0.98f
         )
-        isDark -> Color.White.copy(alpha = if (frostedEnabled) 0.10f else 0.14f)
+        liquidGlass -> if (isDark) Color(0xFF14151F).copy(alpha = 0.86f) else Color.White.copy(alpha = 0.88f)
+        isDark -> Color(0xFF161722).copy(alpha = if (frostedEnabled) 0.82f else 0.92f)
         else -> MaterialTheme.colorScheme.surfaceContainerHigh.copy(
             alpha = if (frostedEnabled) 0.82f else 0.94f
         )
@@ -92,10 +96,11 @@ fun DockedNavigationBar(
                 Modifier.frostedGlass(
                     shape = barShape,
                     tint = surfaceColor,
-                    elevation = 10.dp
+                    elevation = 14.dp
                 )
             } else {
                 Modifier
+                    .shadow(elevation = 10.dp, shape = barShape, spotColor = Color.Black.copy(alpha = 0.35f))
                     .clip(barShape)
                     .background(surfaceColor)
             }
@@ -115,6 +120,7 @@ fun DockedNavigationBar(
                 label = "DockedNavIconScale"
             )
             val iconColor = if (isSelected) MaterialTheme.colorScheme.primary
+            else if (isDark) Color.White.copy(alpha = 0.72f)
             else MaterialTheme.colorScheme.onSurfaceVariant
 
             Column(
@@ -159,7 +165,7 @@ fun DockedNavigationBar(
                     Text(
                         text = label,
                         fontSize = 11.sp,
-                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold,
                         color = iconColor,
                         maxLines = 1
                     )

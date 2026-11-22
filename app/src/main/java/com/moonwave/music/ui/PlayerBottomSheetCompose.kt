@@ -1052,12 +1052,11 @@ fun PlayerBottomSheetCompose(
         )
 
         if (showPlayerContentArea) {
-            Surface(
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .offset { IntOffset(0, sheetVisualState.visualSheetTranslationYProvider().roundToInt()) }
-                    .height(containerHeight),
-                color = Color.Transparent
+                    .height(containerHeight)
             ) {
                 Box(modifier = Modifier.fillMaxSize().padding(bottom = sheetVisualState.currentBottomPadding)) {
                     Column(
@@ -1097,19 +1096,37 @@ fun PlayerBottomSheetCompose(
                                     transformOrigin = TransformOrigin(0.5f, 1f)
                                 }
                                 .shadow(
-                                    elevation = if (currentSheetContentState == PlayerSheetState.COLLAPSED) (if (frostedEnabled) 8.dp else 6.dp) else 0.dp,
+                                    elevation = if (currentSheetContentState == PlayerSheetState.COLLAPSED) (if (frostedEnabled) 14.dp else 8.dp) else 0.dp,
                                     shape = playerShadowShape,
-                                    spotColor = Color.Black.copy(alpha = if (isDark) 0.35f else 0.16f)
+                                    ambientColor = Color.Black.copy(alpha = 0.25f),
+                                    spotColor = Color.Black.copy(alpha = if (isDark) 0.45f else 0.22f)
                                 )
                                 .background(
                                     color = surfaceBgColor,
                                     shape = playerShadowShape
                                 )
                                 .then(
-                                    if (currentSheetContentState == PlayerSheetState.COLLAPSED) {
+                                    if (currentSheetContentState == PlayerSheetState.COLLAPSED && frostedEnabled && !solidStateSurfaces) {
+                                        Modifier
+                                            .background(
+                                                Brush.verticalGradient(
+                                                    listOf(
+                                                        Color.White.copy(alpha = 0.12f),
+                                                        Color.White.copy(alpha = 0.02f),
+                                                        Color.Black.copy(alpha = 0.15f)
+                                                    )
+                                                ),
+                                                shape = playerShadowShape
+                                            )
+                                            .border(
+                                                width = 1.dp,
+                                                color = (if (isDark) Color.White else Color.Black).copy(alpha = 0.18f),
+                                                shape = playerShadowShape
+                                            )
+                                    } else if (currentSheetContentState == PlayerSheetState.COLLAPSED) {
                                         Modifier.border(
                                             width = 1.dp,
-                                            color = (if (isDark) Color.White else Color.Black).copy(alpha = if (frostedEnabled) 0.10f else 0.06f),
+                                            color = (if (isDark) Color.White else Color.Black).copy(alpha = 0.08f),
                                             shape = playerShadowShape
                                         )
                                     } else Modifier
@@ -1160,7 +1177,7 @@ fun PlayerBottomSheetCompose(
                                 val t = playerContentExpansionFraction.value
                                 val lyricsT = lyricsArtworkProgress
 
-                                val miniSizePx = 46.dp.toPx()
+                                val miniSizePx = 48.dp.toPx()
                                 val fullSizePx = albumArtSizeDp.toPx()
                                 val normalScale = androidx.compose.ui.util.lerp(miniSizePx / fullSizePx, 1f, t)
 
@@ -1171,15 +1188,15 @@ fun PlayerBottomSheetCompose(
                                 val xStartPx = startPaddingPx + 10.dp.toPx()
                                 val xEndPx = (with(density) { screenWidth.dp.toPx() } - fullSizePx) / 2f
 
-                                val yStartPx = 13.dp.toPx()
+                                val yStartPx = (with(density) { MiniPlayerHeight.toPx() } - miniSizePx) / 2f
                                 val minTopOffsetDp = with(density) { statusBarTopPx.toDp() } + 68.dp // Removed 16.dp extra gap
                                 val topOffsetDp = ((containerHeight - albumArtSizeDp) / 2f - 220.dp).coerceAtLeast(minTopOffsetDp)
                                 val yEndPx = with(density) { topOffsetDp.toPx() }
 
                                 val normalX = androidx.compose.ui.util.lerp(xStartPx, xEndPx, t)
                                 val normalY = androidx.compose.ui.util.lerp(yStartPx, yEndPx, t)
-                                val normalCornerRadius = androidx.compose.ui.util.lerp(fullSizePx / 2f, 16.dp.toPx(), t)
-                                val normalShadow = androidx.compose.ui.util.lerp(0f, 16.dp.toPx(), t)
+                                val normalCornerRadius = androidx.compose.ui.util.lerp(12.dp.toPx(), 20.dp.toPx(), t)
+                                val normalShadow = androidx.compose.ui.util.lerp(4.dp.toPx(), 16.dp.toPx(), t)
 
                                 val appBarThumbSizePx = 44.dp.toPx()
                                 val appBarScale = appBarThumbSizePx / fullSizePx
@@ -1198,7 +1215,8 @@ fun PlayerBottomSheetCompose(
                                 shape = RoundedCornerShape(cornerRadius)
                                 clip = true
                                 shadowElevation = androidx.compose.ui.util.lerp(normalShadow, 6.dp.toPx(), lyricsT)
-                                alpha = artworkAlpha
+                                val expandAlpha = ((t - 0.02f) / 0.15f).coerceIn(0f, 1f)
+                                alpha = artworkAlpha * expandAlpha
                             }
                             .zIndex(if (isQueueExpanded) 1f else if (isLyricsModeEnabled || lyricsArtworkProgress > 0f) 6f else 3f)
                     ) {
@@ -1232,75 +1250,70 @@ fun PlayerBottomSheetCompose(
             }
         }
         
-        Box(
+        androidx.compose.material3.SnackbarHost(
+            hostState = snackbarHostState,
             modifier = Modifier
-                .fillMaxSize()
-                .zIndex(100f) // Keep Snackbar always on top
-        ) {
-            androidx.compose.material3.SnackbarHost(
-                hostState = snackbarHostState,
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .offset {
-                        val bottomNavHeightPx = if (dynamicBottomNavHeightState.value > 0f) {
-                            dynamicBottomNavHeightState.value
-                        } else {
-                            with(density) { 75.dp.toPx() }
-                        }
-                        val bottomNavVisibilityFraction = (bottomNavTranslationYState.value / (if (bottomNavHeightPx > 0) bottomNavHeightPx else 1f)).coerceIn(0f, 1f)
-                        val currentBottomGapPx = with(density) { 
-                            androidx.compose.ui.unit.lerp(12.dp, 8.dp, bottomNavVisibilityFraction).toPx() 
-                        }
-                        
-                        val effectiveBottomNavHeight = (bottomNavHeightPx - bottomNavTranslationYState.value).coerceAtLeast(0f)
-                        
-                        var bottomOffsetPx = effectiveBottomNavHeight + with(density) { 16.dp.toPx() }
-                        
-                        if (showPlayerContentArea) {
-                            val miniPlayerHeightPx = with(density) { MiniPlayerHeight.toPx() }
-                            bottomOffsetPx = effectiveBottomNavHeight + currentBottomGapPx + miniPlayerHeightPx + with(density) { 8.dp.toPx() }
-                            
-                            val topOfPlayerSheetY = sheetVisualState.visualSheetTranslationYProvider()
-                            bottomOffsetPx = screenHeightPx - topOfPlayerSheetY + with(density) { 8.dp.toPx() }
-                        }
-                        
-                        IntOffset(0, -bottomOffsetPx.roundToInt())
+                .align(Alignment.BottomCenter)
+                .zIndex(100f)
+                .offset {
+                    val bottomNavHeightPx = if (dynamicBottomNavHeightState.value > 0f) {
+                        dynamicBottomNavHeightState.value
+                    } else {
+                        with(density) { 75.dp.toPx() }
                     }
-            ) { data ->
-                androidx.compose.material3.Snackbar(
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                    containerColor = MaterialTheme.colorScheme.inverseSurface,
-                    contentColor = MaterialTheme.colorScheme.inverseOnSurface,
-                    shape = RoundedCornerShape(12.dp)
+                    val bottomNavVisibilityFraction = (bottomNavTranslationYState.value / (if (bottomNavHeightPx > 0) bottomNavHeightPx else 1f)).coerceIn(0f, 1f)
+                    val currentBottomGapPx = with(density) { 
+                        androidx.compose.ui.unit.lerp(12.dp, 8.dp, bottomNavVisibilityFraction).toPx() 
+                    }
+                    
+                    val effectiveBottomNavHeight = (bottomNavHeightPx - bottomNavTranslationYState.value).coerceAtLeast(0f)
+                    
+                    var bottomOffsetPx = effectiveBottomNavHeight + with(density) { 16.dp.toPx() }
+                    
+                    if (showPlayerContentArea) {
+                        val miniPlayerHeightPx = with(density) { MiniPlayerHeight.toPx() }
+                        bottomOffsetPx = effectiveBottomNavHeight + currentBottomGapPx + miniPlayerHeightPx + with(density) { 8.dp.toPx() }
+                        
+                        val topOfPlayerSheetY = sheetVisualState.visualSheetTranslationYProvider()
+                        bottomOffsetPx = screenHeightPx - topOfPlayerSheetY + with(density) { 8.dp.toPx() }
+                    }
+                    
+                    IntOffset(0, -bottomOffsetPx.roundToInt())
+                }
+        ) { data ->
+            androidx.compose.material3.Snackbar(
+                modifier = Modifier.padding(horizontal = 16.dp),
+                containerColor = MaterialTheme.colorScheme.inverseSurface,
+                contentColor = MaterialTheme.colorScheme.inverseOnSurface,
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                val customVisuals = data.visuals as? com.moonwave.music.ui.CustomSnackbarVisuals
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(vertical = 2.dp)
                 ) {
-                    val customVisuals = data.visuals as? com.moonwave.music.ui.CustomSnackbarVisuals
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(vertical = 2.dp)
-                    ) {
-                        if (customVisuals?.iconVector != null) {
-                            Icon(
-                                imageVector = customVisuals.iconVector,
-                                contentDescription = null,
-                                modifier = Modifier.size(22.dp),
-                                tint = MaterialTheme.colorScheme.inversePrimary
-                            )
-                            Spacer(modifier = Modifier.width(12.dp))
-                        } else if (customVisuals?.iconResId != null) {
-                            Icon(
-                                painter = painterResource(id = customVisuals.iconResId),
-                                contentDescription = null,
-                                modifier = Modifier.size(22.dp),
-                                tint = MaterialTheme.colorScheme.inversePrimary
-                            )
-                            Spacer(modifier = Modifier.width(12.dp))
-                        }
-                        Text(
-                            text = data.visuals.message,
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.Medium
+                    if (customVisuals?.iconVector != null) {
+                        Icon(
+                            imageVector = customVisuals.iconVector,
+                            contentDescription = null,
+                            modifier = Modifier.size(22.dp),
+                            tint = MaterialTheme.colorScheme.inversePrimary
                         )
+                        Spacer(modifier = Modifier.width(12.dp))
+                    } else if (customVisuals?.iconResId != null) {
+                        Icon(
+                            painter = painterResource(id = customVisuals.iconResId),
+                            contentDescription = null,
+                            modifier = Modifier.size(22.dp),
+                            tint = MaterialTheme.colorScheme.inversePrimary
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
                     }
+                    Text(
+                        text = data.visuals.message,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium
+                    )
                 }
             }
         }
@@ -1358,87 +1371,33 @@ private fun MiniPlayerContentInternal(
                 .padding(start = 10.dp, end = 8.dp, top = 6.dp, bottom = 7.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Morphing Art Space - compact circular artwork that expands into the full cover
+            // Mini Player Artwork Container (clean 12dp rounded squircle without unusual circular progress distortion)
             Box(
-                modifier = Modifier.size(54.dp),
+                modifier = Modifier
+                    .size(48.dp)
+                    .shadow(elevation = 4.dp, shape = RoundedCornerShape(12.dp), spotColor = Color.Black.copy(alpha = 0.35f))
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(if (isDark) Color(0xFF23222A) else Color(0xFFE8E7EE))
+                    .border(
+                        1.dp,
+                        (if (isDark) Color.White.copy(alpha = 0.14f) else Color.Black.copy(alpha = 0.06f)),
+                        RoundedCornerShape(12.dp)
+                    ),
                 contentAlignment = Alignment.Center
             ) {
-                val progressAnimatable = remember { Animatable(0f) }
-                LaunchedEffect(currentPosition, duration) {
-                    val target = if (duration > 0) (currentPosition.toFloat() / duration.toFloat()).coerceIn(0f, 1f) else 0f
-                    progressAnimatable.animateTo(
-                        targetValue = target,
-                        animationSpec = tween(durationMillis = 350, easing = LinearEasing)
-                    )
-                }
-
-                val amplitudeAnimatable = remember { Animatable(if (isPlaying) 1f else 0f) }
-                LaunchedEffect(isPlaying) {
-                    amplitudeAnimatable.animateTo(
-                        targetValue = if (isPlaying) 1f else 0f,
-                        animationSpec = spring(
-                            dampingRatio = Spring.DampingRatioMediumBouncy,
-                            stiffness = Spring.StiffnessLow
-                        )
-                    )
-                }
-
-                if (isProcessing) {
-                    CircularWavyProgressIndicator(
-                        modifier = Modifier.size(52.dp),
-                        color = accentColor,
-                        trackColor = accentColor.copy(alpha = 0.25f),
-                        amplitude = amplitudeAnimatable.value,
-                        stroke = androidx.compose.ui.graphics.drawscope.Stroke(
-                            width = with(LocalDensity.current) { 5.dp.toPx() },
-                            cap = androidx.compose.ui.graphics.StrokeCap.Round
-                        ),
-                        trackStroke = androidx.compose.ui.graphics.drawscope.Stroke(
-                            width = with(LocalDensity.current) { 5.dp.toPx() },
-                            cap = androidx.compose.ui.graphics.StrokeCap.Round
-                        )
-                    )
-                } else {
-                    CircularWavyProgressIndicator(
-                        progress = { progressAnimatable.value },
-                        modifier = Modifier.size(54.dp),
-                        color = accentColor,
-                        trackColor = accentColor.copy(alpha = 0.22f),
-                        waveSpeed = WavyProgressIndicatorDefaults.CircularWavelength * 0.4f,
-                        amplitude = { amplitudeAnimatable.value },
-                        stroke = androidx.compose.ui.graphics.drawscope.Stroke(
-                            width = with(LocalDensity.current) { 5.dp.toPx() },
-                            cap = androidx.compose.ui.graphics.StrokeCap.Round
-                        ),
-                        trackStroke = androidx.compose.ui.graphics.drawscope.Stroke(
-                            width = with(LocalDensity.current) { 5.dp.toPx() },
-                            cap = androidx.compose.ui.graphics.StrokeCap.Round
-                        )
-                    )
-                }
-
-                Box(
-                    modifier = Modifier
-                        .size(44.dp)
-                        .shadow(elevation = 3.dp, shape = SmoothCornerShape(16.dp))
-                        .clip(SmoothCornerShape(16.dp))
-                        .background(if (isDark) Color(0xFF23222A) else Color(0xFFE8E7EE)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    artworkRequest?.let { request ->
-                        AsyncImage(
-                            model = request,
-                            contentDescription = null,
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    } ?: Icon(
-                        painter = painterResource(R.drawable.ic_music_note),
+                artworkRequest?.let { request ->
+                    AsyncImage(
+                        model = request,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                        modifier = Modifier.size(24.dp)
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
                     )
-                }
+                } ?: Icon(
+                    painter = painterResource(R.drawable.ic_music_note),
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                    modifier = Modifier.size(24.dp)
+                )
             }
 
             Spacer(modifier = Modifier.width(12.dp))

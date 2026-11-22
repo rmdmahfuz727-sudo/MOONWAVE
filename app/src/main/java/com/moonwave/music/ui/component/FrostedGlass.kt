@@ -29,10 +29,10 @@ import androidx.compose.ui.unit.dp
  */
 object FrostedGlassDefaults {
     val Shape: Shape = RoundedCornerShape(24.dp)
-    val Tint: Color = Color(0xFF121218).copy(alpha = 0.62f)
-    val Border: Color = Color.White.copy(alpha = 0.14f)
-    val BlurRadius: Dp = 18.dp
-    val Elevation: Dp = 12.dp
+    val Tint: Color = Color(0xFF121218).copy(alpha = 0.82f)
+    val Border: Color = Color.White.copy(alpha = 0.16f)
+    val BlurRadius: Dp = 28.dp
+    val Elevation: Dp = 16.dp
 }
 
 /**
@@ -50,17 +50,17 @@ fun Modifier.frostedGlass(
     .shadow(
         elevation = elevation,
         shape = shape,
-        ambientColor = Color.Black.copy(alpha = 0.18f),
-        spotColor = Color.Black.copy(alpha = 0.32f)
+        ambientColor = Color.Black.copy(alpha = 0.35f),
+        spotColor = Color.Black.copy(alpha = 0.55f)
     )
     .clip(shape)
     .background(tint)
     .background(
         Brush.verticalGradient(
             listOf(
-                Color.White.copy(alpha = 0.07f),
-                Color.Transparent,
-                Color.Black.copy(alpha = 0.05f)
+                Color.White.copy(alpha = 0.14f),
+                Color.White.copy(alpha = 0.03f),
+                Color.Black.copy(alpha = 0.18f)
             )
         )
     )

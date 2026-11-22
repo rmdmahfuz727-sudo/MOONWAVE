@@ -13,7 +13,9 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -49,6 +51,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.SearchBar
@@ -91,8 +94,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -110,6 +115,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.moonwave.music.MainActivity
+import com.moonwave.music.R
 import com.moonwave.music.data.innertube.OnlineSong
 import com.moonwave.music.data.innertube.SearchFilter
 import com.moonwave.music.data.innertube.SearchItem
@@ -161,7 +167,11 @@ fun Modifier.sharedElementIfAvailable(key: String): Modifier {
 fun ExploreScreen(
     viewModel: ExploreViewModel,
     playerSharedViewModel: PlayerSharedViewModel,
-    onNavigateToLibrary: () -> Unit = {}
+    onNavigateToLibrary: () -> Unit = {},
+    onNavigateToSettings: () -> Unit = {},
+    startInSearchMode: Boolean = false,
+    searchTrigger: Int = 0,
+    onExitSearch: (() -> Unit)? = null
 ) {
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
@@ -195,7 +205,17 @@ fun ExploreScreen(
     val homeMoods = uiState.homeMoods
     val detailStack = uiState.detailStack
 
-    var isSearchActive by remember { mutableStateOf(false) }
+    var isSearchActive by remember(startInSearchMode) { mutableStateOf(startInSearchMode) }
+    LaunchedEffect(startInSearchMode) {
+        if (startInSearchMode) {
+            isSearchActive = true
+        }
+    }
+    LaunchedEffect(searchTrigger) {
+        if (searchTrigger > 0) {
+            isSearchActive = true
+        }
+    }
     var selectedSongForMenu by remember { mutableStateOf<OnlineSong?>(null) }
     var showCreditsForSong by remember { mutableStateOf<OnlineSong?>(null) }
 
@@ -314,7 +334,11 @@ fun ExploreScreen(
     }
 
     androidx.activity.compose.BackHandler(enabled = isSearchActive && !isPlayerExpanded) {
-        isSearchActive = false
+        if (startInSearchMode && onExitSearch != null) {
+            onExitSearch()
+        } else {
+            isSearchActive = false
+        }
     }
 
     androidx.activity.compose.BackHandler(enabled = searchQuery.isNotBlank() && !isPlayerExpanded) {
@@ -384,8 +408,14 @@ fun ExploreScreen(
     val onSearchHeaderSearch = remember(viewModel) {
         { query: String -> viewModel.search(query); isSearchActive = false }
     }
-    val onSearchHeaderActiveChange = remember {
-        { active: Boolean -> isSearchActive = active }
+    val onSearchHeaderActiveChange = remember(startInSearchMode, onExitSearch) {
+        { active: Boolean ->
+            if (!active && startInSearchMode && onExitSearch != null) {
+                onExitSearch()
+            } else {
+                isSearchActive = active
+            }
+        }
     }
     val onSearchHeaderClearHistory = remember(viewModel) {
         { viewModel.clearSearchHistory() }
@@ -740,7 +770,8 @@ fun ExploreScreen(
                                             currentFilter = currentFilter,
                                             onFilterClick = onSearchHeaderFilterClick,
                                             isLandscape = isLandscape,
-                                            onClearSearch = onSearchHeaderClearSearch
+                                            onClearSearch = onSearchHeaderClearSearch,
+                                            onNavigateToSettings = onNavigateToSettings
                                         )
 
                                         Box(modifier = Modifier.weight(1f)) {
@@ -1583,33 +1614,123 @@ fun ExploreScreen(
         currentFilter: SearchFilter?,
         onFilterClick: (SearchFilter?) -> Unit,
         isLandscape: Boolean,
-        onClearSearch: () -> Unit
+        onClearSearch: () -> Unit,
+        onNavigateToSettings: () -> Unit = {}
     ) {
         Column(
             modifier = Modifier.then(
                 if (isSearchActive) Modifier else Modifier.statusBarsPadding()
             )
         ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(
-                        horizontal = if (isSearchActive) 0.dp else 16.dp,
-                        vertical = if (isSearchActive) 0.dp else 8.dp
-                    ),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Box(
-                    modifier = Modifier.fillMaxWidth(),
-                    contentAlignment = if (isLandscape) Alignment.Center else Alignment.CenterStart
+            if (!isSearchActive && searchQuery.isBlank()) {
+                // Mochy Music Home Top Bar
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 10.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    SearchBar(
-                        inputField = {
-                            SearchBarDefaults.InputField(
-                                query = searchQuery,
-                                onQueryChange = onQueryChange,
-                                onSearch = onSearch,
-                                expanded = isSearchActive,
+                    // Left: Brand Logo / Icon
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Image(
+                            painter = painterResource(R.drawable.ic_applogo),
+                            contentDescription = "MOONWAVE",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                        )
+                        Text(
+                            text = "MOONWAVE",
+                            style = MaterialTheme.typography.titleLarge.copy(
+                                fontWeight = FontWeight.Black,
+                                letterSpacing = (-0.5).sp
+                            ),
+                            color = MaterialTheme.colorScheme.onBackground
+                        )
+                    }
+
+                    // Right: History + Profile Avatar (Settings)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        IconButton(
+                            onClick = { onAccountVisibleChange(true) },
+                            modifier = Modifier.size(40.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.History,
+                                contentDescription = "History",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+
+                        IconButton(
+                            onClick = { onNavigateToSettings() },
+                            modifier = Modifier.size(40.dp)
+                        ) {
+                            if (userProfile?.avatarUrl != null) {
+                                AsyncImage(
+                                    model = ImageRequest.Builder(LocalContext.current)
+                                        .data(userProfile.avatarUrl)
+                                        .crossfade(true)
+                                        .build(),
+                                    contentDescription = "Settings",
+                                    modifier = Modifier
+                                        .size(32.dp)
+                                        .clip(CircleShape)
+                                        .border(
+                                            1.5.dp,
+                                            MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
+                                            CircleShape
+                                        ),
+                                    contentScale = ContentScale.Crop
+                                )
+                            } else {
+                                Box(
+                                    modifier = Modifier
+                                        .size(32.dp)
+                                        .clip(CircleShape)
+                                        .background(MaterialTheme.colorScheme.surfaceVariant),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Person,
+                                        contentDescription = "Settings",
+                                        modifier = Modifier.size(20.dp),
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            } else {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(
+                            horizontal = if (isSearchActive) 0.dp else 16.dp,
+                            vertical = if (isSearchActive) 0.dp else 8.dp
+                        ),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentAlignment = if (isLandscape) Alignment.Center else Alignment.CenterStart
+                    ) {
+                        SearchBar(
+                            inputField = {
+                                SearchBarDefaults.InputField(
+                                    query = searchQuery,
+                                    onQueryChange = onQueryChange,
+                                    onSearch = onSearch,
+                                    expanded = isSearchActive,
                                 onExpandedChange = onSearchActiveChange,
                                 placeholder = {
                                     Text(
@@ -1908,3 +2029,4 @@ fun ExploreScreen(
             }
         }
     }
+}

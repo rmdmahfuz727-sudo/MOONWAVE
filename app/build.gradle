@@ -35,8 +35,8 @@ android {
         applicationId "com.moonwave.music"
         minSdk 25
         targetSdk 37
-        versionCode 24
-        versionName "2.3.0"
+        versionCode 27
+        versionName "2.3.3"
     }
 
     signingConfigs {

@@ -30,6 +30,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
@@ -66,6 +67,7 @@ fun MoonwaveNavigationBar(
         context.getSharedPreferences(AppearancePrefs.PREFS, android.content.Context.MODE_PRIVATE)
     }
     val frostedEnabled by appearancePrefs.observeKey(AppearancePrefs.FROSTED_GLASS, true)
+    val liquidGlass by appearancePrefs.observeKey(AppearancePrefs.LIQUID_GLASS, true)
     val solidState by appearancePrefs.observeKey(AppearancePrefs.SOLID_STATE_SURFACES, false)
 
     // The floating bar must never read as a black slab. In dark mode we lift the theme surface
@@ -78,22 +80,25 @@ fun MoonwaveNavigationBar(
         MaterialTheme.colorScheme.surfaceContainerHigh
     }
     val surfaceColor = when {
-        solidState -> liftedSurface.copy(alpha = 0.96f)
-        isDark -> Color.White.copy(alpha = 0.13f)
-        else -> Color.White.copy(alpha = 0.60f)
+        solidState -> liftedSurface.copy(alpha = 0.98f)
+        liquidGlass -> if (isDark) Color(0xFF14151F).copy(alpha = 0.86f) else Color.White.copy(alpha = 0.88f)
+        isDark -> Color(0xFF161722).copy(alpha = if (frostedEnabled) 0.82f else 0.92f)
+        else -> Color.White.copy(alpha = if (frostedEnabled) 0.82f else 0.92f)
     }
     val borderColor = if (isDark) {
-        Color.White.copy(alpha = 0.20f)
+        if (liquidGlass) Color.White.copy(alpha = 0.18f) else Color.White.copy(alpha = 0.20f)
     } else {
-        Color.White.copy(alpha = 0.55f)
+        if (liquidGlass) Color.Black.copy(alpha = 0.08f) else Color.White.copy(alpha = 0.55f)
     }
     val activePillColor = if (isDark) {
-        Color.White.copy(alpha = 0.15f)
+        MaterialTheme.colorScheme.primary.copy(alpha = 0.22f)
     } else {
-        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.62f)
+        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.75f)
     }
 
-    val selectedIndex = items.indexOfFirst { it.first == currentRoute }.let { if (it >= 0) it else 0 }
+    // -1 means the current destination is not one of the tabs (e.g. Settings), so no tab is
+    // highlighted instead of falsely highlighting Home.
+    val selectedIndex = items.indexOfFirst { it.first == currentRoute }
     val animatedPillIndex by animateFloatAsState(
         targetValue = selectedIndex.toFloat(),
         animationSpec = spring(dampingRatio = 0.82f, stiffness = 420f),
@@ -111,10 +116,11 @@ fun MoonwaveNavigationBar(
                 shape = barShape,
                 tint = surfaceColor,
                 borderColor = borderColor,
-                elevation = 14.dp
+                elevation = 16.dp
             )
         } else {
             Modifier
+                .shadow(elevation = 12.dp, shape = barShape, spotColor = Color.Black.copy(alpha = 0.35f))
                 .clip(barShape)
                 .background(surfaceColor)
                 .border(1.dp, borderColor, barShape)
@@ -125,7 +131,6 @@ fun MoonwaveNavigationBar(
                 .fillMaxWidth()
                 .height(barHeight)
                 .then(barSurfaceModifier)
-                .press3D(maxTilt = 3f, pressedScale = 0.99f)
         ) {
             val totalWidth = maxWidth
             val count = items.size.coerceAtLeast(1)
@@ -159,7 +164,7 @@ fun MoonwaveNavigationBar(
                     )
 
                     val activeAlpha by animateFloatAsState(
-                        targetValue = if (isSelected) 1.0f else 0.65f,
+                        targetValue = if (isSelected) 1.0f else 0.75f,
                         animationSpec = spring(dampingRatio = 0.85f, stiffness = 600f),
                         label = "NavAlpha"
                     )
@@ -167,7 +172,8 @@ fun MoonwaveNavigationBar(
                     val iconColor = if (isSelected) {
                         MaterialTheme.colorScheme.primary
                     } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant
+                        if (isDark) Color.White.copy(alpha = 0.72f)
+                        else MaterialTheme.colorScheme.onSurfaceVariant
                     }
 
                     Box(
@@ -203,7 +209,7 @@ fun MoonwaveNavigationBar(
                                 Text(
                                     text = label,
                                     fontSize = 11.sp,
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold,
                                     color = iconColor,
                                     maxLines = 1
                                 )

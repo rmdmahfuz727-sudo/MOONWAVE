@@ -32,6 +32,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
@@ -54,7 +55,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.draw.blur
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -231,6 +234,9 @@ class MainActivity : AppCompatActivity() {
                 val isPlayerExpanded by playerViewModel.isPlayerExpanded.collectAsStateWithLifecycle()
 
                 var editingSong by remember { mutableStateOf<SongItem?>(null) }
+                // Incremented every time the Search tab is tapped so the search sheet reopens
+                // even when the search destination is already on top of the back stack.
+                var searchTrigger by remember { mutableStateOf(0) }
 
                 Scaffold(
                     contentWindowInsets = WindowInsets(0, 0, 0, 0),
@@ -239,7 +245,7 @@ class MainActivity : AppCompatActivity() {
                     val navBackStackEntry by currentNavController.currentBackStackEntryAsState()
                     val currentDestination = navBackStackEntry?.destination
 
-                    val showBottomBar = currentDestination?.route in listOf("explore", "library", "effects", "settings")
+                    val showBottomBar = currentDestination?.route in listOf("explore", "search", "library", "effects", "settings")
 
                     val density = LocalDensity.current
                     val navigationBarsHeightPx = WindowInsets.navigationBars.getBottom(density).toFloat()
@@ -404,6 +410,40 @@ class MainActivity : AppCompatActivity() {
                                                 launchSingleTop = true
                                                 restoreState = true
                                             }
+                                        },
+                                        onNavigateToSettings = {
+                                            currentNavController.navigate("settings")
+                                        }
+                                    )
+                                }
+                                composable("search") {
+                                    ExploreScreen(
+                                        viewModel = exploreViewModel,
+                                        playerSharedViewModel = playerViewModel,
+                                        onNavigateToLibrary = {
+                                            currentNavController.navigate("library") {
+                                                popUpTo(currentNavController.graph.findStartDestination().id) {
+                                                    saveState = true
+                                                }
+                                                launchSingleTop = true
+                                                restoreState = true
+                                            }
+                                        },
+                                        onNavigateToSettings = {
+                                            currentNavController.navigate("settings")
+                                        },
+                                        startInSearchMode = true,
+                                        searchTrigger = searchTrigger,
+                                        onExitSearch = {
+                                            if (currentNavController.currentDestination?.route == "search") {
+                                                currentNavController.navigate("explore") {
+                                                    popUpTo(currentNavController.graph.findStartDestination().id) {
+                                                        saveState = true
+                                                    }
+                                                    launchSingleTop = true
+                                                    restoreState = true
+                                                }
+                                            }
                                         }
                                     )
                                 }
@@ -422,6 +462,9 @@ class MainActivity : AppCompatActivity() {
                                                 launchSingleTop = true
                                                 restoreState = true
                                             }
+                                        },
+                                        onNavigateToSettings = {
+                                            currentNavController.navigate("settings")
                                         }
                                     )
                                 }
@@ -459,11 +502,41 @@ class MainActivity : AppCompatActivity() {
                             }
                         }
 
-                        // 2. Navigation Bar: Truly floating over the edge-to-edge content
+                        // 1.5. Bottom Gradient Fade Scrim (diffuses scrolling list under floating chrome)
+                        val isPlayerExpanded = playerExpansionFractionState.value > 0.05f
+                        if (showBottomBar && !isPlayerExpanded) {
+                            Box(
+                                modifier = Modifier
+                                    .align(Alignment.BottomCenter)
+                                    .fillMaxWidth()
+                                    .height(180.dp)
+                                    .zIndex(0.5f)
+                                    .background(
+                                        Brush.verticalGradient(
+                                            listOf(
+                                                Color.Transparent,
+                                                MaterialTheme.colorScheme.background.copy(alpha = 0.55f),
+                                                MaterialTheme.colorScheme.background.copy(alpha = 0.88f),
+                                                MaterialTheme.colorScheme.background
+                                            )
+                                        )
+                                    )
+                            )
+                        }
+
+                        // 2. Player Bottom Sheet (Mini Player + Full Screen Player)
+                        PlayerBottomSheetCompose(
+                            activity = this@MainActivity,
+                            viewModel = playerViewModel,
+                            modifier = Modifier.zIndex(if (isPlayerExpanded) 20f else 1f)
+                        )
+
+                        // 3. Navigation Bar: Truly floating over the edge-to-edge content
                         if (showBottomBar) {
                             Box(
                                 modifier = Modifier
                                     .align(Alignment.BottomCenter)
+                                    .zIndex(if (isPlayerExpanded) 0f else 10f)
                                     .graphicsLayer {
                                         val currentBase = animatedBaseTranslationState.value
                                         val currentFraction = playerExpansionFractionState.value
@@ -479,22 +552,39 @@ class MainActivity : AppCompatActivity() {
                                     }
                             ) {
                                 val items = listOf(
-                                    Triple("explore", "Explore", R.drawable.ic_explore),
+                                    Triple("explore", "Home", R.drawable.ic_explore),
+                                    Triple("search", "Search", R.drawable.ic_search),
                                     Triple("library", "Library", R.drawable.ic_library_music),
-                                    Triple("effects", "Effects", R.drawable.ic_equalizer),
-                                    Triple("settings", "Settings", R.drawable.ic_settings)
+                                    Triple("effects", "Effects", R.drawable.ic_equalizer)
                                 )
                                 val onNavigate: (String) -> Unit = { route ->
                                     if (route == "explore") {
                                         exploreViewModel.resetToHome()
                                     }
+                                    if (route == "search") {
+                                        // Re-open the search field even if we are already on the
+                                        // search destination (e.g. after backing out of search).
+                                        searchTrigger++
+                                    }
                                     if (currentDestination?.route != route) {
-                                        currentNavController.navigate(route) {
-                                            popUpTo(currentNavController.graph.findStartDestination().id) {
-                                                saveState = true
+                                        if (route == "explore") {
+                                            // Home must always win: pop Settings/Search/etc. above the
+                                            // start destination without restoring an old state that could
+                                            // bring the previous screen back.
+                                            currentNavController.navigate("explore") {
+                                                popUpTo(currentNavController.graph.findStartDestination().id) {
+                                                    inclusive = false
+                                                }
+                                                launchSingleTop = true
                                             }
-                                            launchSingleTop = true
-                                            restoreState = true
+                                        } else {
+                                            currentNavController.navigate(route) {
+                                                popUpTo(currentNavController.graph.findStartDestination().id) {
+                                                    saveState = true
+                                                }
+                                                launchSingleTop = true
+                                                restoreState = true
+                                            }
                                         }
                                     }
                                 }
@@ -517,11 +607,6 @@ class MainActivity : AppCompatActivity() {
                                 }
                             }
                         }
-
-                        PlayerBottomSheetCompose(
-                            activity = this@MainActivity,
-                            viewModel = playerViewModel
-                        )
                     }
                 }
             }

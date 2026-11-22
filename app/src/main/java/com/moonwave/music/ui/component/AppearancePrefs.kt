@@ -20,6 +20,7 @@ object AppearancePrefs {
     const val SLIDE_NAV_ON_SCROLL = "slide_nav_on_scroll"
 
     // Surfaces
+    const val LIQUID_GLASS = "liquid_glass_material"
     const val FROSTED_GLASS = "frosted_glass_blur"
     const val SOLID_STATE_SURFACES = "solid_state_surfaces"
     const val TAB_SWITCHING_BLUR = "tab_switching_blur"

@@ -34,6 +34,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -111,6 +112,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
@@ -167,7 +169,8 @@ enum class SortOrder {
 fun LibraryScreen(
     viewModel: PlayerSharedViewModel,
     onEditSong: (SongItem) -> Unit = {},
-    onNavigateToExplore: () -> Unit = {}
+    onNavigateToExplore: () -> Unit = {},
+    onNavigateToSettings: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val mainActivity = remember(context) { getActivityFromContext(context) as? MainActivity }
@@ -178,6 +181,9 @@ fun LibraryScreen(
     val scope = rememberCoroutineScope()
 
     var activeTab by remember { mutableStateOf("") }
+    var librarySearchQuery by remember { mutableStateOf("") }
+    // 0 = expanded header, 1 = collapsed (title + chips hidden, search bar stays).
+    var libraryHeaderCollapse by remember { mutableStateOf(0f) }
     var searchQuery by remember { mutableStateOf("") }
     var sortOrder by remember { mutableStateOf(SortOrder.A_Z) }
     var isRefreshing by remember { mutableStateOf(false) }
@@ -197,6 +203,14 @@ fun LibraryScreen(
     val isLoadingStream by exploreViewModel?.isLoadingStream?.collectAsStateWithLifecycle(false) ?: remember { mutableStateOf(false) }
 
     val localSongs by viewModel.localSongs.collectAsStateWithLifecycle(emptyList())
+    // The library search bar filters every collection tab (All / Local / Downloads / Cached / Songs).
+    val visibleLocalSongs = remember(localSongs, librarySearchQuery) {
+        if (librarySearchQuery.isBlank()) localSongs
+        else localSongs.filter {
+            it.title.contains(librarySearchQuery, ignoreCase = true) ||
+                it.artist.contains(librarySearchQuery, ignoreCase = true)
+        }
+    }
     val favoriteIds by viewModel.favoriteSongIds.collectAsStateWithLifecycle(emptySet())
     val currentSong by viewModel.currentSong.collectAsStateWithLifecycle()
 
@@ -206,6 +220,11 @@ fun LibraryScreen(
     var showCreatePlaylistDialog by remember { mutableStateOf(false) }
     var showCreditsForSong by remember { mutableStateOf<OnlineSong?>(null) }
     val localPlaylists by viewModel.localPlaylistsFlow.collectAsStateWithLifecycle(emptyList())
+
+    // Re-expand the header whenever the user switches collection tab.
+    LaunchedEffect(activeTab) {
+        libraryHeaderCollapse = 0f
+    }
 
     // Trigger local files scan on first composition
     LaunchedEffect(Unit) {
@@ -257,6 +276,24 @@ fun LibraryScreen(
 
     val nestedScrollConnection = remember(mainActivity) {
         object : androidx.compose.ui.input.nestedscroll.NestedScrollConnection {
+            override fun onPreScroll(
+                available: androidx.compose.ui.geometry.Offset,
+                source: androidx.compose.ui.input.nestedscroll.NestedScrollSource
+            ): androidx.compose.ui.geometry.Offset {
+                val dy = available.y
+                if (dy > 0f) {
+                    // Swiping back down: bring the navigation bar back immediately, even when
+                    // the list is already at the very top (where no scroll is consumed).
+                    mainActivity?.showBottomNavWithAnimation()
+                    if (libraryHeaderCollapse > 0f) {
+                        val consume = minOf(dy, libraryHeaderCollapse * 260f)
+                        libraryHeaderCollapse = (libraryHeaderCollapse - consume / 260f).coerceIn(0f, 1f)
+                        if (consume > 0f) return androidx.compose.ui.geometry.Offset(0f, consume)
+                    }
+                }
+                return androidx.compose.ui.geometry.Offset.Zero
+            }
+
             override fun onPostScroll(
                 consumed: androidx.compose.ui.geometry.Offset,
                 available: androidx.compose.ui.geometry.Offset,
@@ -269,14 +306,49 @@ fun LibraryScreen(
                         mainActivity.showBottomNavWithAnimation()
                     }
                 }
+                // Collapsing header: title + filter chips fade/slide away on scroll down.
+                val dy = consumed.y
+                if (dy < -1f) {
+                    libraryHeaderCollapse = (libraryHeaderCollapse + (-dy / 260f)).coerceAtMost(1f)
+                }
                 return super.onPostScroll(consumed, available, source)
             }
         }
     }
 
+    // Accent used by the Mochy collection tabs. The ambient gradient is painted here, behind the
+    // shared header, so the top bar and the hero blend into a single surface.
+    val mochyAccent = when (activeTab) {
+        "Local Files" -> Color(0xFF2B8B5A)
+        "Downloads" -> Color(0xFF8B5A2B)
+        "Cached" -> Color(0xFF2B5A8B)
+        "Songs" -> Color(0xFF4C3D8B)
+        else -> null
+    }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        // Painted edge-to-edge (behind the status bar too) so no black strip shows above the
+        // colored collection pages.
+        if (mochyAccent != null) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(820.dp)
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                mochyAccent.copy(alpha = 0.72f),
+                                mochyAccent.copy(alpha = 0.42f),
+                                MaterialTheme.colorScheme.background.copy(alpha = 0.90f),
+                                MaterialTheme.colorScheme.background
+                            )
+                        )
+                    )
+            )
+        }
     Scaffold(
         // snackbarHost = { SnackbarHost(hostState = snackbarHostState) }, // Replaced by global SnackbarController
-        containerColor = MaterialTheme.colorScheme.background
+        containerColor = if (mochyAccent != null) Color.Transparent else MaterialTheme.colorScheme.background
     ) { paddingValues ->
         Box(
             modifier = Modifier
@@ -287,22 +359,32 @@ fun LibraryScreen(
                 modifier = Modifier.fillMaxSize()
             ) {
                 val userProfile by accountViewModel?.userProfile?.collectAsStateWithLifecycle() ?: remember { mutableStateOf(null) }
-                var librarySearchQuery by remember { mutableStateOf("") }
 
-                // Moonwave Library Top Bar
-                com.moonwave.music.ui.component.MoonwaveLibraryTopBar(
-                    avatarUrl = userProfile?.avatarUrl,
-                    onAvatarClick = { showAccountScreen = true },
-                    onHistoryClick = { showHistoryScreen = true }
-                )
+                // Collapsing "Library" title: shrinks away as the list scrolls up.
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(58.dp * (1f - libraryHeaderCollapse))
+                        .clipToBounds()
+                ) {
+                    com.moonwave.music.ui.component.MoonwaveLibraryTopBar(
+                        avatarUrl = userProfile?.avatarUrl,
+                        onAvatarClick = { onNavigateToSettings() },
+                        onHistoryClick = { showHistoryScreen = true },
+                        modifier = Modifier
+                            .offset(y = (-58).dp * libraryHeaderCollapse)
+                            .graphicsLayer { alpha = 1f - libraryHeaderCollapse }
+                    )
+                }
 
-                // Moonwave Library Search Bar
+                // Moonwave Library Search Bar (stays pinned)
                 com.moonwave.music.ui.component.MoonwaveLibrarySearchBar(
                     query = librarySearchQuery,
                     onQueryChange = { librarySearchQuery = it }
                 )
 
-                // Moonwave Library Filter Chips
+                // Filter chips stay pinned: only the large "Library" title collapses, so the
+                // top options never disappear while scrolling.
                 com.moonwave.music.ui.component.MoonwaveLibraryFilterChips(
                     selectedTab = when (activeTab) {
                         "Local Files" -> "Local"
@@ -326,15 +408,81 @@ fun LibraryScreen(
                     .nestedScroll(nestedScrollConnection)
             ) {
                 when (activeTab) {
-                    "Playlists" -> PlaylistsTabContent(nestedScrollConnection, viewModel)
-                    "Podcasts" -> PodcastsTabContent(nestedScrollConnection)
-                    "Songs" -> SongsTabContent(nestedScrollConnection, viewModel)
+                    "Songs" -> {
+                        val allLibrarySongs = remember(visibleLocalSongs) { visibleLocalSongs }
+                        val currentSong by viewModel.currentSong.collectAsStateWithLifecycle()
+                        val isPlaying by viewModel.isPlaying.collectAsStateWithLifecycle()
+
+                        MochyCollectionScreen(
+                            title = "Songs",
+                            heroType = MochyHeroType.Library,
+                            songs = allLibrarySongs,
+                            currentSong = currentSong,
+                            isPlaying = isPlaying,
+                            onBack = { activeTab = "" },
+                            includeStatusBarPadding = false,
+                            drawAmbientGradient = false,
+                            accentColor = Color(0xFF4C3D8B),
+                            onSongClick = { song, list, _ ->
+                                viewModel.setSongList(list)
+                                viewModel.playSong(song)
+                            },
+                            onSongMenuClick = { song ->
+                                val bs = SongActionsBottomSheet.newInstance(song)
+                                bs.setActionListener(object : SongActionsBottomSheet.ActionListener {
+                                    override fun onPlay(s: SongItem) = viewModel.playSong(s)
+                                    override fun onPlayNext(s: SongItem) {
+                                        viewModel.addToQueueNext(s)
+                                        scope.launch { com.moonwave.music.ui.SnackbarController.showMessage("Playing next: ${s.title}") }
+                                    }
+                                    override fun onAddToQueue(s: SongItem) {
+                                        viewModel.addToQueue(s)
+                                        scope.launch { com.moonwave.music.ui.SnackbarController.showMessage("Added to queue: ${s.title}") }
+                                    }
+                                    override fun onDelete(s: SongItem) {
+                                        scope.launch { scanLocalFiles(context, viewModel) }
+                                    }
+                                    override fun onEdit(s: SongItem) {
+                                        onEditSong(s)
+                                    }
+                                    override fun onFavorite(s: SongItem, isFav: Boolean) {
+                                        viewModel.toggleFavorite(s.id)
+                                    }
+                                    override fun onShare(s: SongItem) {
+                                        try {
+                                            val intent = Intent(Intent.ACTION_SEND).apply {
+                                                type = "audio/*"
+                                                putExtra(Intent.EXTRA_STREAM, s.contentUri)
+                                                putExtra(Intent.EXTRA_TEXT, "Listen to ${s.title}")
+                                            }
+                                            context.startActivity(Intent.createChooser(intent, "Share Song"))
+                                        } catch (_: Exception) {}
+                                    }
+                                })
+                                val activity = getActivityFromContext(context) as? androidx.fragment.app.FragmentActivity
+                                activity?.let { bs.show(it.supportFragmentManager, "SongActionsBottomSheet") }
+                            },
+                            onPlayAll = { list ->
+                                if (list.isNotEmpty()) {
+                                    viewModel.setSongList(list)
+                                    viewModel.playSong(list.first())
+                                }
+                            },
+                            onShuffle = { list ->
+                                if (list.isNotEmpty()) {
+                                    val shuffled = list.shuffled()
+                                    viewModel.setSongList(shuffled)
+                                    viewModel.playSong(shuffled.first())
+                                }
+                            }
+                        )
+                    }
                     "Albums" -> AlbumsTabContent(nestedScrollConnection)
                     "Artists" -> ArtistsTabContent(nestedScrollConnection)
                     "Recap" -> RecapTabContent(nestedScrollConnection, viewModel, onNavigateToExplore)
                     "Downloads" -> {
-                        val downloadedSongs = remember(localSongs) {
-                            localSongs.filter { isMoonwaveDownloadedSong(it) }
+                        val downloadedSongs = remember(visibleLocalSongs) {
+                            visibleLocalSongs.filter { isMoonwaveDownloadedSong(it) }
                         }
                         val currentSong by viewModel.currentSong.collectAsStateWithLifecycle()
                         val isPlaying by viewModel.isPlaying.collectAsStateWithLifecycle()
@@ -345,7 +493,10 @@ fun LibraryScreen(
                             songs = downloadedSongs,
                             currentSong = currentSong,
                             isPlaying = isPlaying,
-                            onBack = { activeTab = "All" },
+                            onBack = null,
+                            includeStatusBarPadding = false,
+                            drawAmbientGradient = false,
+                            accentColor = Color(0xFF8B5A2B),
                             onSongClick = { song, list, _ ->
                                 viewModel.setSongList(list)
                                 viewModel.playSong(song)
@@ -401,366 +552,148 @@ fun LibraryScreen(
                         )
                     }
                     "Local Files" -> {
-                        val downloadsOnly = false
-                        val tabSongs = remember(localSongs) {
-                            localSongs.filter { !isMoonwaveDownloadedSong(it) }
+                        val localOnlySongs = remember(visibleLocalSongs) {
+                            visibleLocalSongs.filter { !isMoonwaveDownloadedSong(it) }
                         }
+                        val currentSong by viewModel.currentSong.collectAsStateWithLifecycle()
+                        val isPlaying by viewModel.isPlaying.collectAsStateWithLifecycle()
 
-                        // Scan Local Files helper
-                        val onRefreshAction = {
-                            scope.launch {
-                                isRefreshing = true
-                                scanLocalFiles(context, viewModel)
-                                isRefreshing = false
-                            }
-                        }
-
-                        val pullToRefreshState = rememberPullToRefreshState()
-
-                        PullToRefreshBox(
-                            isRefreshing = isRefreshing,
-                            onRefresh = { onRefreshAction() },
-                            state = pullToRefreshState,
-                            modifier = Modifier.fillMaxSize()
-                        ) {
-                            Column(modifier = Modifier.fillMaxSize()) {
-                                // Search Bar
-                                OutlinedTextField(
-                                    value = searchQuery,
-                                    onValueChange = { searchQuery = it },
-                                    placeholder = {
-                                        Text(if (downloadsOnly) "Search downloaded songs..." else "Search local songs...")
-                                    },
-                                    leadingIcon = { Icon(Icons.Default.Search, null) },
-                                    trailingIcon = {
-                                        if (searchQuery.isNotEmpty()) {
-                                            IconButton(onClick = { searchQuery = "" }) {
-                                                Icon(Icons.Default.Clear, null)
-                                            }
-                                        }
-                                    },
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 16.dp, vertical = 6.dp),
-                                    shape = CircleShape,
-                                    singleLine = true,
-                                    colors = OutlinedTextFieldDefaults.colors(
-                                        focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
-                                    )
-                                )
-
-                                // Sorting chips
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .horizontalScroll(rememberScrollState())
-                                        .padding(horizontal = 16.dp, vertical = 4.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    SortOrder.entries.forEach { order ->
-                                        val isSel = sortOrder == order
-                                        FilterChip(
-                                            selected = isSel,
-                                            onClick = { sortOrder = order },
-                                            label = {
-                                                Text(
-                                                    text = order.name.replace("_", " "),
-                                                    fontWeight = FontWeight.SemiBold
-                                                )
-                                            },
-                                            shape = RoundedCornerShape(8.dp),
-                                            border = null,
-                                            colors = FilterChipDefaults.filterChipColors(
-                                                containerColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
-                                                labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                                                selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
-                                            )
-                                        )
+                        MochyCollectionScreen(
+                            title = "Local Files",
+                            heroType = MochyHeroType.Folder,
+                            songs = if (localOnlySongs.isNotEmpty()) localOnlySongs else visibleLocalSongs,
+                            currentSong = currentSong,
+                            isPlaying = isPlaying,
+                            onBack = null,
+                            includeStatusBarPadding = false,
+                            drawAmbientGradient = false,
+                            accentColor = Color(0xFF2B8B5A),
+                            onSongClick = { song, list, _ ->
+                                viewModel.setSongList(list)
+                                viewModel.playSong(song)
+                            },
+                            onSongMenuClick = { song ->
+                                val bs = SongActionsBottomSheet.newInstance(song)
+                                bs.setActionListener(object : SongActionsBottomSheet.ActionListener {
+                                    override fun onPlay(s: SongItem) = viewModel.playSong(s)
+                                    override fun onPlayNext(s: SongItem) {
+                                        viewModel.addToQueueNext(s)
+                                        scope.launch { com.moonwave.music.ui.SnackbarController.showMessage("Playing next: ${s.title}") }
                                     }
+                                    override fun onAddToQueue(s: SongItem) {
+                                        viewModel.addToQueue(s)
+                                        scope.launch { com.moonwave.music.ui.SnackbarController.showMessage("Added to queue: ${s.title}") }
+                                    }
+                                    override fun onDelete(s: SongItem) {
+                                        scope.launch { scanLocalFiles(context, viewModel) }
+                                    }
+                                    override fun onEdit(s: SongItem) {
+                                        onEditSong(s)
+                                    }
+                                    override fun onFavorite(s: SongItem, isFav: Boolean) {
+                                        viewModel.toggleFavorite(s.id)
+                                    }
+                                    override fun onShare(s: SongItem) {
+                                        try {
+                                            val intent = Intent(Intent.ACTION_SEND).apply {
+                                                type = "audio/*"
+                                                putExtra(Intent.EXTRA_STREAM, s.contentUri)
+                                                putExtra(Intent.EXTRA_TEXT, "Listen to ${s.title}")
+                                            }
+                                            context.startActivity(Intent.createChooser(intent, "Share Song"))
+                                        } catch (_: Exception) {}
+                                    }
+                                })
+                                val activity = getActivityFromContext(context) as? androidx.fragment.app.FragmentActivity
+                                activity?.let { bs.show(it.supportFragmentManager, "SongActionsBottomSheet") }
+                            },
+                            onPlayAll = { list ->
+                                if (list.isNotEmpty()) {
+                                    viewModel.setSongList(list)
+                                    viewModel.playSong(list.first())
                                 }
-
-                                Spacer(modifier = Modifier.height(6.dp))
-
-                                // Filter, Sort, and Group local songs
-                                val filteredSongs = remember(tabSongs, searchQuery) {
-                                    tabSongs.filter {
-                                        it.title.contains(searchQuery, ignoreCase = true) || it.artist.contains(searchQuery, ignoreCase = true)
-                                    }
-                                }
-
-                                val sortedAndGrouped = remember(filteredSongs, sortOrder) {
-                                    if (filteredSongs.isEmpty()) return@remember emptyList()
-
-                                    val sorted = when (sortOrder) {
-                                        SortOrder.A_Z -> filteredSongs.sortedWith(compareBy { it.title.lowercase() })
-                                        SortOrder.DATE_ADDED -> filteredSongs.sortedWith(compareByDescending { it.dateAdded })
-                                        SortOrder.ARTIST -> filteredSongs.sortedWith(compareBy { it.artist.lowercase() })
-                                        SortOrder.DURATION -> filteredSongs.sortedWith(compareByDescending { it.duration })
-                                    }
-
-                                    val groups = LinkedHashMap<String, MutableList<SongItem>>()
-                                    when (sortOrder) {
-                                        SortOrder.A_Z -> {
-                                            for (song in sorted) {
-                                                val header = if (song.title.isEmpty()) "#" else {
-                                                    val char = song.title.uppercase().first()
-                                                    if (char.isLetter()) char.toString() else "#"
-                                                }
-                                                groups.getOrPut(header) { mutableListOf() }.add(song)
-                                            }
-                                        }
-                                        SortOrder.DATE_ADDED -> {
-                                            for (song in sorted) {
-                                                val diff = (System.currentTimeMillis() / 1000) - song.dateAdded
-                                                val days = diff / (60 * 60 * 24)
-                                                val header = when {
-                                                    days < 1 -> "Today"
-                                                    days < 2 -> "Yesterday"
-                                                    days < 7 -> "This Week"
-                                                    days < 30 -> "This Month"
-                                                    days < 365 -> "This Year"
-                                                    else -> "Older"
-                                                }
-                                                groups.getOrPut(header) { mutableListOf() }.add(song)
-                                            }
-                                        }
-                                        SortOrder.ARTIST -> {
-                                            for (song in sorted) {
-                                                val header = song.artist.ifBlank { "Unknown Artist" }
-                                                groups.getOrPut(header) { mutableListOf() }.add(song)
-                                            }
-                                        }
-                                        SortOrder.DURATION -> {
-                                            for (song in sorted) {
-                                                val min = song.duration / 60000
-                                                val header = when {
-                                                    min < 2 -> "Under 2 min"
-                                                    min < 4 -> "2-4 min"
-                                                    min < 6 -> "4-6 min"
-                                                    min < 10 -> "6-10 min"
-                                                    else -> "Over 10 min"
-                                                }
-                                                groups.getOrPut(header) { mutableListOf() }.add(song)
-                                            }
-                                        }
-                                    }
-
-                                    val list = mutableListOf<Any>()
-                                    for ((header, groupSongs) in groups) {
-                                        list.add(header)
-                                        list.addAll(groupSongs)
-                                    }
-                                    list
-                                }
-
-                                if (sortedAndGrouped.isEmpty()) {
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .weight(1f),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Text(
-                                            when {
-                                                searchQuery.isNotEmpty() -> "No matching songs found"
-                                                downloadsOnly -> "No downloads yet. Download a song from Explore to see it here."
-                                                else -> "Scan device files to load songs"
-                                            },
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            textAlign = TextAlign.Center,
-                                            modifier = Modifier.padding(horizontal = 24.dp)
-                                        )
-                                    }
-                                } else {
-                                    LazyColumn(
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .weight(1f),
-                                        contentPadding = PaddingValues(bottom = 160.dp),
-                                        verticalArrangement = Arrangement.spacedBy(2.dp)
-                                    ) {
-                                        itemsIndexed(sortedAndGrouped) { index, item ->
-                                            if (item is String) {
-                                                Text(
-                                                    text = item,
-                                                    style = MaterialTheme.typography.titleSmall,
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                    modifier = Modifier
-                                                        .fillMaxWidth()
-                                                        .padding(horizontal = 20.dp, vertical = 10.dp)
-                                                )
-                                            } else if (item is SongItem) {
-                                                val isPlaying = currentSong?.id == item.id
-                                                val isFav = favoriteIds.contains(item.id)
-
-                                                // Calculate segment position
-                                                var sectionStartIndex = index
-                                                for (i in index - 1 downTo 0) {
-                                                    if (sortedAndGrouped[i] is String) {
-                                                        sectionStartIndex = i + 1
-                                                        break
-                                                    }
-                                                    if (i == 0) sectionStartIndex = 0
-                                                }
-
-                                                var count = 0
-                                                for (i in sectionStartIndex until sortedAndGrouped.size) {
-                                                    if (sortedAndGrouped[i] is String) break
-                                                    count++
-                                                }
-
-                                                val localIndex = index - sectionStartIndex
-
-                                                // SwipeToDismissBox implementation
-                                                val dismissState = rememberSwipeToDismissBoxState(
-                                                    confirmValueChange = { dismissValue ->
-                                                        when (dismissValue) {
-                                                            SwipeToDismissBoxValue.StartToEnd -> {
-                                                                viewModel.addToQueueNext(item)
-                                                                scope.launch {
-                                                                    com.moonwave.music.ui.SnackbarController.showMessage("Playing next: ${item.title}")
-                                                                }
-                                                                false
-                                                            }
-                                                            SwipeToDismissBoxValue.EndToStart -> {
-                                                                viewModel.addToQueue(item)
-                                                                scope.launch {
-                                                                    com.moonwave.music.ui.SnackbarController.showMessage("Added to queue: ${item.title}")
-                                                                }
-                                                                false
-                                                            }
-                                                            else -> false
-                                                        }
-                                                    }
-                                                )
-
-                                                SwipeToDismissBox(
-                                                    state = dismissState,
-                                                    backgroundContent = {
-                                                        val color = when (dismissState.dismissDirection) {
-                                                            SwipeToDismissBoxValue.StartToEnd -> MaterialTheme.colorScheme.primaryContainer
-                                                            SwipeToDismissBoxValue.EndToStart -> MaterialTheme.colorScheme.secondaryContainer
-                                                            else -> Color.Transparent
-                                                        }
-                                                        val icon = when (dismissState.dismissDirection) {
-                                                            SwipeToDismissBoxValue.StartToEnd -> Icons.Default.SkipNext
-                                                            SwipeToDismissBoxValue.EndToStart -> Icons.AutoMirrored.Filled.QueueMusic
-                                                            else -> null
-                                                        }
-                                                        val alignment = when (dismissState.dismissDirection) {
-                                                            SwipeToDismissBoxValue.StartToEnd -> Alignment.CenterStart
-                                                            SwipeToDismissBoxValue.EndToStart -> Alignment.CenterEnd
-                                                            else -> Alignment.Center
-                                                        }
-                                                        val topRadius = if (localIndex == 0) 24.dp else 4.dp
-                                                        val bottomRadius = if (localIndex == count - 1) 24.dp else 4.dp
-                                                        val backgroundShape = RoundedCornerShape(
-                                                            topStart = topRadius, topEnd = topRadius,
-                                                            bottomStart = bottomRadius, bottomEnd = bottomRadius
-                                                        )
-                                                        Box(
-                                                            modifier = Modifier
-                                                                .fillMaxSize()
-                                                                .padding(horizontal = 8.dp, vertical = 1.dp)
-                                                                .clip(backgroundShape)
-                                                                .background(color.copy(alpha = dismissState.progress.coerceIn(0f, 1f))),
-                                                            contentAlignment = alignment
-                                                        ) {
-                                                            if (icon != null) {
-                                                                Icon(
-                                                                    imageVector = icon,
-                                                                    contentDescription = null,
-                                                                    modifier = Modifier
-                                                                        .padding(horizontal = 24.dp)
-                                                                        .graphicsLayer {
-                                                                            val p = dismissState.progress
-                                                                            scaleX = (p * 1.2f).coerceIn(0.6f, 1.1f)
-                                                                            scaleY = (p * 1.2f).coerceIn(0.6f, 1.1f)
-                                                                            alpha = p.coerceIn(0.3f, 1.0f)
-                                                                        },
-                                                                    tint = if (dismissState.dismissDirection == SwipeToDismissBoxValue.StartToEnd) {
-                                                                        MaterialTheme.colorScheme.onPrimaryContainer
-                                                                    } else {
-                                                                        MaterialTheme.colorScheme.onSecondaryContainer
-                                                                    }
-                                                                )
-                                                            }
-                                                        }
-                                                    },
-                                                    content = {
-                                                        SongListItem(
-                                                            song = item,
-                                                            isPlaying = isPlaying,
-                                                            isFavorite = isFav,
-                                                            localIndex = localIndex,
-                                                            localCount = count,
-                                                            onClick = {
-                                                                // Play clicked song, set the entire filtered songs list as queue
-                                                                viewModel.setSongList(filteredSongs)
-                                                                viewModel.playSong(item)
-                                                            },
-                                                            onLongClick = {
-                                                                val bs = SongActionsBottomSheet.newInstance(item)
-                                                                bs.setActionListener(object : SongActionsBottomSheet.ActionListener {
-                                                                    override fun onPlay(song: SongItem) {
-                                                                        viewModel.playSong(song)
-                                                                    }
-                                                                    override fun onPlayNext(song: SongItem) {
-                                                                        viewModel.addToQueueNext(song)
-                                                                        scope.launch {
-                                                                            com.moonwave.music.ui.SnackbarController.showMessage("Playing next: ${song.title}")
-                                                                        }
-                                                                    }
-                                                                    override fun onAddToQueue(song: SongItem) {
-                                                                        viewModel.addToQueue(song)
-                                                                        scope.launch {
-                                                                            com.moonwave.music.ui.SnackbarController.showMessage("Added to queue: ${song.title}")
-                                                                        }
-                                                                    }
-                                                                    override fun onDelete(song: SongItem) {
-                                                                        try {
-                                                                            val file = java.io.File(song.path)
-                                                                            if (file.exists()) file.delete()
-                                                                            // Rescan
-                                                                            scope.launch {
-                                                                                scanLocalFiles(context, viewModel)
-                                                                            }
-                                                                        } catch (_: Exception) {}
-                                                                    }
-                                                                    override fun onEdit(song: SongItem) {
-                                                                        onEditSong(song)
-                                                                    }
-                                                                    override fun onFavorite(song: SongItem, isFav: Boolean) {
-                                                                        viewModel.toggleFavorite(song.id)
-                                                                    }
-                                                                    override fun onShare(song: SongItem) {
-                                                                        try {
-                                                                            val intent = Intent(Intent.ACTION_SEND).apply {
-                                                                                type = "audio/*"
-                                                                                putExtra(Intent.EXTRA_STREAM, song.contentUri)
-                                                                                putExtra(Intent.EXTRA_TEXT, "Listen to ${song.title}")
-                                                                            }
-                                                                            context.startActivity(Intent.createChooser(intent, "Share Song"))
-                                                                        } catch (_: Exception) {}
-                                                                    }
-                                                                })
-                                                                fragmentManager?.let { bs.show(it, "SongActionsBottomSheet") }
-                                                            }
-                                                        )
-                                                    }
-                                                )
-                                            }
-                                        }
-                                    }
+                            },
+                            onShuffle = { list ->
+                                if (list.isNotEmpty()) {
+                                    val shuffled = list.shuffled()
+                                    viewModel.setSongList(shuffled)
+                                    viewModel.playSong(shuffled.first())
                                 }
                             }
-                        }
+                        )
                     }
-                    "Cached" -> SongsTabContent(nestedScrollConnection, viewModel)
-                    "Imported" -> PlaylistsTabContent(nestedScrollConnection, viewModel)
+                    "Cached" -> {
+                        val cachedSongs = remember(visibleLocalSongs) {
+                            visibleLocalSongs.filter { it.isCached }
+                        }
+                        val currentSong by viewModel.currentSong.collectAsStateWithLifecycle()
+                        val isPlaying by viewModel.isPlaying.collectAsStateWithLifecycle()
+
+                        MochyCollectionScreen(
+                            title = "Cached Music",
+                            heroType = MochyHeroType.Cached,
+                            songs = cachedSongs,
+                            currentSong = currentSong,
+                            isPlaying = isPlaying,
+                            onBack = null,
+                            includeStatusBarPadding = false,
+                            drawAmbientGradient = false,
+                            accentColor = Color(0xFF2B5A8B),
+                            onSongClick = { song, list, _ ->
+                                viewModel.setSongList(list)
+                                viewModel.playSong(song)
+                            },
+                            onSongMenuClick = { song ->
+                                val bs = SongActionsBottomSheet.newInstance(song)
+                                bs.setActionListener(object : SongActionsBottomSheet.ActionListener {
+                                    override fun onPlay(s: SongItem) = viewModel.playSong(s)
+                                    override fun onPlayNext(s: SongItem) {
+                                        viewModel.addToQueueNext(s)
+                                        scope.launch { com.moonwave.music.ui.SnackbarController.showMessage("Playing next: ${s.title}") }
+                                    }
+                                    override fun onAddToQueue(s: SongItem) {
+                                        viewModel.addToQueue(s)
+                                        scope.launch { com.moonwave.music.ui.SnackbarController.showMessage("Added to queue: ${s.title}") }
+                                    }
+                                    override fun onDelete(s: SongItem) {
+                                        scope.launch { scanLocalFiles(context, viewModel) }
+                                    }
+                                    override fun onEdit(s: SongItem) {
+                                        onEditSong(s)
+                                    }
+                                    override fun onFavorite(s: SongItem, isFav: Boolean) {
+                                        viewModel.toggleFavorite(s.id)
+                                    }
+                                    override fun onShare(s: SongItem) {
+                                        try {
+                                            val intent = Intent(Intent.ACTION_SEND).apply {
+                                                type = "audio/*"
+                                                putExtra(Intent.EXTRA_STREAM, s.contentUri)
+                                                putExtra(Intent.EXTRA_TEXT, "Listen to ${s.title}")
+                                            }
+                                            context.startActivity(Intent.createChooser(intent, "Share Song"))
+                                        } catch (_: Exception) {}
+                                    }
+                                })
+                                val activity = getActivityFromContext(context) as? androidx.fragment.app.FragmentActivity
+                                activity?.let { bs.show(it.supportFragmentManager, "SongActionsBottomSheet") }
+                            },
+                            onPlayAll = { list ->
+                                if (list.isNotEmpty()) {
+                                    viewModel.setSongList(list)
+                                    viewModel.playSong(list.first())
+                                }
+                            },
+                            onShuffle = { list ->
+                                if (list.isNotEmpty()) {
+                                    val shuffled = list.shuffled()
+                                    viewModel.setSongList(shuffled)
+                                    viewModel.playSong(shuffled.first())
+                                }
+                            }
+                        )
+                    }
+                    "Playlists", "Imported" -> PlaylistsTabContent(nestedScrollConnection, viewModel)
                     else -> UnifiedLibraryContent(nestedScrollConnection, onCategoryClick = { activeTab = it })
                 }
             }
@@ -880,6 +813,7 @@ fun LibraryScreen(
                 )
             }
         }
+    }
     }
 }
 }
@@ -2737,6 +2671,16 @@ private fun isMoonwaveDownloadedSong(song: SongItem): Boolean {
         path.contains("/downloads/moonwave/") ||
         path.contains("/music/moonwave/")
 }
+
+/** True for tracks that live in a cache directory (audio cached for offline playback). */
+private val SongItem.isCached: Boolean
+    get() {
+        val rawPath = path ?: data ?: return false
+        val cachedPath = rawPath.replace('\\', '/').lowercase(java.util.Locale.ROOT)
+        return cachedPath.contains("/cache/") ||
+            cachedPath.contains("/media_cache/") ||
+            cachedPath.contains("/android/data/")
+    }
 
 // Background scanner helper
 @RequiresApi(Build.VERSION_CODES.Q)

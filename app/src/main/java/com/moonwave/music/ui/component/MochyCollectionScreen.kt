@@ -25,6 +25,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.KeyboardArrowDown
@@ -53,8 +54,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -68,6 +71,9 @@ import com.moonwave.music.model.SongItem
 sealed class MochyHeroType {
     object Heart : MochyHeroType()
     object Download : MochyHeroType()
+    object Library : MochyHeroType()
+    object Folder : MochyHeroType()
+    object Cached : MochyHeroType()
     data class Artwork(val url: String?) : MochyHeroType()
 }
 
@@ -92,15 +98,18 @@ fun MochyCollectionScreen(
     songs: List<SongItem>,
     currentSong: SongItem?,
     isPlaying: Boolean,
-    onBack: () -> Unit,
+    onBack: (() -> Unit)? = null,
     onSongClick: (SongItem, List<SongItem>, Int) -> Unit,
     onSongMenuClick: (SongItem) -> Unit,
     onPlayAll: (List<SongItem>) -> Unit,
     onShuffle: (List<SongItem>) -> Unit,
     accentColor: Color = Color(0xFF8B5A2B), // Signature Mochy warm amber/copper
     onOptionsClick: (() -> Unit)? = null,
+    includeStatusBarPadding: Boolean = true,
+    drawAmbientGradient: Boolean = true,
     modifier: Modifier = Modifier
 ) {
+    val haptic = LocalHapticFeedback.current
     var searchQuery by remember { mutableStateOf("") }
     var isSearchActive by remember { mutableStateOf(false) }
     var sortOrder by remember { mutableStateOf(MochySortOrder.DATE_ADDED) }
@@ -139,24 +148,28 @@ fun MochyCollectionScreen(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(backgroundColor)
+            .background(if (drawAmbientGradient) backgroundColor else Color.Transparent)
     ) {
-        // Ambient background gradient from the top hero
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(480.dp)
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            accentColor.copy(alpha = 0.55f),
-                            accentColor.copy(alpha = 0.28f),
-                            backgroundColor.copy(alpha = 0.85f),
-                            backgroundColor
+        // Ambient background gradient from the top hero. When the caller already paints a
+        // full-screen gradient (e.g. LibraryScreen behind its header) this is skipped so the
+        // gradient does not restart and leave a visible seam.
+        if (drawAmbientGradient) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(480.dp)
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                accentColor.copy(alpha = 0.55f),
+                                accentColor.copy(alpha = 0.28f),
+                                backgroundColor.copy(alpha = 0.85f),
+                                backgroundColor
+                            )
                         )
                     )
-                )
-        )
+            )
+        }
 
         // Main scrollable content
         LazyColumn(
@@ -168,48 +181,56 @@ fun MochyCollectionScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .statusBarsPadding()
+                        .then(if (includeStatusBarPadding) Modifier.statusBarsPadding() else Modifier)
                         .padding(horizontal = 20.dp, vertical = 8.dp)
                 ) {
                     // Top Bar: Back & Options buttons
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 4.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Surface(
-                            onClick = onBack,
-                            shape = CircleShape,
-                            color = Color.White.copy(alpha = 0.12f),
-                            modifier = Modifier.size(40.dp)
+                    if (onBack != null || onOptionsClick != null) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                    contentDescription = "Back",
-                                    tint = Color.White,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-                        }
-
-                        if (onOptionsClick != null) {
-                            Surface(
-                                onClick = onOptionsClick,
-                                shape = CircleShape,
-                                color = Color.White.copy(alpha = 0.12f),
-                                modifier = Modifier.size(40.dp)
-                            ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    Icon(
-                                        imageVector = Icons.Default.MoreHoriz,
-                                        contentDescription = "Options",
-                                        tint = Color.White,
-                                        modifier = Modifier.size(20.dp)
-                                    )
+                            if (onBack != null) {
+                                Surface(
+                                    onClick = onBack,
+                                    shape = CircleShape,
+                                    color = Color.White.copy(alpha = 0.12f),
+                                    modifier = Modifier.size(40.dp)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(
+                                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                            contentDescription = "Back",
+                                            tint = Color.White,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
                                 }
+                            } else {
+                                Spacer(modifier = Modifier.size(40.dp))
+                            }
+
+                            if (onOptionsClick != null) {
+                                Surface(
+                                    onClick = onOptionsClick,
+                                    shape = CircleShape,
+                                    color = Color.White.copy(alpha = 0.12f),
+                                    modifier = Modifier.size(40.dp)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(
+                                            imageVector = Icons.Default.MoreHoriz,
+                                            contentDescription = "Options",
+                                            tint = Color.White,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
+                                }
+                            } else {
+                                Spacer(modifier = Modifier.size(40.dp))
                             }
                         }
                     }
@@ -238,6 +259,30 @@ fun MochyCollectionScreen(
                                 Icon(
                                     imageVector = Icons.Outlined.FileDownload,
                                     contentDescription = "Downloads",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(105.dp)
+                                )
+                            }
+                            is MochyHeroType.Library -> {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_library_music),
+                                    contentDescription = "Library",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(105.dp)
+                                )
+                            }
+                            is MochyHeroType.Folder -> {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_folder_music),
+                                    contentDescription = "Local Files",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(105.dp)
+                                )
+                            }
+                            is MochyHeroType.Cached -> {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_music_note),
+                                    contentDescription = "Cached",
                                     tint = Color.White,
                                     modifier = Modifier.size(105.dp)
                                 )
@@ -412,7 +457,10 @@ fun MochyCollectionScreen(
                     Box {
                         Row(
                             modifier = Modifier
-                                .clickable { sortMenuExpanded = true }
+                                .clickable {
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    sortMenuExpanded = true
+                                }
                                 .padding(vertical = 4.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(4.dp)
@@ -436,14 +484,26 @@ fun MochyCollectionScreen(
                             onDismissRequest = { sortMenuExpanded = false }
                         ) {
                             MochySortOrder.entries.forEach { order ->
+                                val isSelected = order == sortOrder
                                 DropdownMenuItem(
                                     text = {
                                         Text(
                                             order.displayName,
-                                            fontWeight = if (order == sortOrder) FontWeight.Bold else FontWeight.Normal
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                                         )
                                     },
+                                    leadingIcon = if (isSelected) {
+                                        {
+                                            Icon(
+                                                imageVector = Icons.Default.Check,
+                                                contentDescription = null,
+                                                tint = MaterialTheme.colorScheme.primary,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        }
+                                    } else null,
                                     onClick = {
+                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                         sortOrder = order
                                         sortMenuExpanded = false
                                     }
